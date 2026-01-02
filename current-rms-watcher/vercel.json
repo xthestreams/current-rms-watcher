@@ -1,0 +1,13 @@
+{
+  "version": 2,
+  "buildCommand": "npm run build",
+  "devCommand": "npm run dev",
+  "installCommand": "npm install",
+  "framework": "nextjs",
+  "regions": ["iad1"],
+  "env": {
+    "CURRENT_RMS_SUBDOMAIN": "@current_rms_subdomain",
+    "CURRENT_RMS_API_KEY": "@current_rms_api_key",
+    "WEBHOOK_SECRET": "@webhook_secret"
+  }
+}
