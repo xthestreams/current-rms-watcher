@@ -4,7 +4,6 @@
   "devCommand": "npm run dev",
   "installCommand": "npm install",
   "framework": "nextjs",
-  "regions": ["iad1"],
   "env": {
     "CURRENT_RMS_SUBDOMAIN": "alvgroup",
     "CURRENT_RMS_API_KEY": "oRqWz8oxpgtpcuajph1S"
