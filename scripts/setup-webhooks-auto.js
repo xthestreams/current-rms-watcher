@@ -146,14 +146,9 @@ async function setupWebhooks() {
     process.exit(1);
   }
 
-  if (!config.vercelUrl) {
-    console.log('⚠️  No VERCEL_URL detected. Skipping webhook setup.');
-    console.log('   Webhooks will be created on first production deployment.');
-    process.exit(0);
-  }
-
-  // Construct target URL
-  const targetUrl = `https://${config.vercelUrl}/api/webhook`;
+  // Use stable production URL or fall back to VERCEL_URL
+  const productionUrl = process.env.VERCEL_PROJECT_PRODUCTION_URL || 'current-rms-watcher.vercel.app';
+  const targetUrl = `https://${productionUrl}/api/webhook`;
   
   console.log('📋 Configuration:');
   console.log(`   Subdomain: ${config.subdomain}`);
