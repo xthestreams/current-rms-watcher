@@ -1,6 +1,6 @@
 # Current RMS Watcher
 
-A headless webhook watcher application for monitoring Current RMS opportunity stage changes with real-time business rule automation and a health dashboard for testing and observability.
+A prototype test of a headless webhook watcher application for monitoring Current RMS opportunity stage changes with real-time business rule automation and a health dashboard for testing and observability.
 
 ## Features
 
