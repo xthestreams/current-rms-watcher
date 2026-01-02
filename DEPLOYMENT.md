@@ -68,8 +68,10 @@ Once deployed, you need to register your webhook endpoint with Current RMS.
 **Using cURL:**
 
 ```bash
-curl -X POST "https://api.current-rms.com/api/v1/webhooks?apikey=YOUR_API_KEY" \
-  -H "Content-Type: application/json" \
+curl -X POST "https://api.current-rms.com/api/v1/webhooks" \
+  --header "X-SUBDOMAIN: your-subdomain" \
+  --header "X-AUTH-TOKEN: your-api-key" \
+  --header "Content-Type: application/json" \
   -d '{
     "webhook": {
       "name": "Opportunity Watcher - All Updates",
@@ -84,8 +86,10 @@ curl -X POST "https://api.current-rms.com/api/v1/webhooks?apikey=YOUR_API_KEY" \
 
 ```bash
 # Convert to Order
-curl -X POST "https://api.current-rms.com/api/v1/webhooks?apikey=YOUR_API_KEY" \
-  -H "Content-Type: application/json" \
+curl -X POST "https://api.current-rms.com/api/v1/webhooks" \
+  --header "X-SUBDOMAIN: your-subdomain" \
+  --header "X-AUTH-TOKEN: your-api-key" \
+  --header "Content-Type: application/json" \
   -d '{
     "webhook": {
       "name": "Opportunity Watcher - Convert to Order",
@@ -96,8 +100,10 @@ curl -X POST "https://api.current-rms.com/api/v1/webhooks?apikey=YOUR_API_KEY" \
   }'
 
 # Mark as Reserved
-curl -X POST "https://api.current-rms.com/api/v1/webhooks?apikey=YOUR_API_KEY" \
-  -H "Content-Type: application/json" \
+curl -X POST "https://api.current-rms.com/api/v1/webhooks" \
+  --header "X-SUBDOMAIN: your-subdomain" \
+  --header "X-AUTH-TOKEN: your-api-key" \
+  --header "Content-Type: application/json" \
   -d '{
     "webhook": {
       "name": "Opportunity Watcher - Mark Reserved",
@@ -108,8 +114,10 @@ curl -X POST "https://api.current-rms.com/api/v1/webhooks?apikey=YOUR_API_KEY" \
   }'
 
 # Mark as Lost
-curl -X POST "https://api.current-rms.com/api/v1/webhooks?apikey=YOUR_API_KEY" \
-  -H "Content-Type: application/json" \
+curl -X POST "https://api.current-rms.com/api/v1/webhooks" \
+  --header "X-SUBDOMAIN: your-subdomain" \
+  --header "X-AUTH-TOKEN: your-api-key" \
+  --header "Content-Type: application/json" \
   -d '{
     "webhook": {
       "name": "Opportunity Watcher - Mark Lost",
@@ -125,7 +133,9 @@ curl -X POST "https://api.current-rms.com/api/v1/webhooks?apikey=YOUR_API_KEY" \
 List your webhooks to confirm:
 
 ```bash
-curl "https://api.current-rms.com/api/v1/webhooks?apikey=YOUR_API_KEY"
+curl "https://api.current-rms.com/api/v1/webhooks" \
+  --header "X-SUBDOMAIN: your-subdomain" \
+  --header "X-AUTH-TOKEN: your-api-key"
 ```
 
 ### 3. Test the Webhook
@@ -186,7 +196,9 @@ Current RMS provides webhook logs showing:
 
 Access via API:
 ```bash
-curl "https://api.current-rms.com/api/v1/webhook_logs?apikey=YOUR_API_KEY"
+curl "https://api.current-rms.com/api/v1/webhook_logs" \
+  --header "X-SUBDOMAIN: your-subdomain" \
+  --header "X-AUTH-TOKEN: your-api-key"
 ```
 
 ## Updating Your Deployment
@@ -227,7 +239,9 @@ vercel env pull .env.local
 
 **Check 1: Webhook is registered**
 ```bash
-curl "https://api.current-rms.com/api/v1/webhooks?apikey=YOUR_API_KEY"
+curl "https://api.current-rms.com/api/v1/webhooks" \
+  --header "X-SUBDOMAIN: your-subdomain" \
+  --header "X-AUTH-TOKEN: your-api-key"
 ```
 
 **Check 2: URL is correct**

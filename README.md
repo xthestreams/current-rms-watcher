@@ -1,6 +1,16 @@
 # Current RMS Watcher
 
-A prototype headless webhook watcher application for monitoring Current RMS opportunity stage changes with real-time business rule automation and a health dashboard for testing and observability.
+A headless webhook watcher application for monitoring Current RMS opportunity stage changes with real-time business rule automation and a health dashboard for testing and observability.
+
+## ✨ Automatic Setup
+
+**No manual webhook configuration needed!** This application automatically creates all required webhooks during Vercel deployment.
+
+Just set two environment variables in Vercel:
+- `CURRENT_RMS_SUBDOMAIN`
+- `CURRENT_RMS_API_KEY`
+
+Deploy, and you're done! 🚀
 
 ## Features
 
@@ -26,8 +36,34 @@ Current RMS → Webhook → Your Application → Business Rules → Actions
 - Node.js 18+ 
 - npm or yarn
 - Current RMS account with API access enabled
+- Vercel account (free tier works great)
 
-### Installation
+### Automatic Deployment (Recommended)
+
+1. **Push to GitHub:**
+```bash
+git init
+git add .
+git commit -m "Initial commit"
+git remote add origin https://github.com/yourusername/current-rms-watcher.git
+git push -u origin main
+```
+
+2. **Deploy to Vercel:**
+   - Visit [vercel.com/new](https://vercel.com/new)
+   - Import your repository
+   - Add environment variables:
+     - `CURRENT_RMS_SUBDOMAIN` = your-subdomain
+     - `CURRENT_RMS_API_KEY` = your-api-key
+   - Click Deploy
+
+3. **Done!** Webhooks are automatically created during deployment.
+
+See [AUTOMATIC_DEPLOYMENT.md](AUTOMATIC_DEPLOYMENT.md) for detailed instructions.
+
+### Local Development
+
+For local testing without automatic webhook setup:
 
 1. Clone or download this repository
 2. Install dependencies:
@@ -75,8 +111,10 @@ yarn dev
 Use the Current RMS API to create a webhook subscription:
 
 ```bash
-curl -X POST "https://api.current-rms.com/api/v1/webhooks?apikey=YOUR_API_KEY" \
-  -H "Content-Type: application/json" \
+curl -X POST "https://api.current-rms.com/api/v1/webhooks" \
+  --header "X-SUBDOMAIN: your-subdomain" \
+  --header "X-AUTH-TOKEN: your-api-key" \
+  --header "Content-Type: application/json" \
   -d '{
     "webhook": {
       "name": "Opportunity Updates Watcher",
@@ -93,22 +131,46 @@ Create additional webhooks for specific events:
 
 ```javascript
 // Convert to order
-{
-  "event": "opportunity_convert_to_order",
-  "target_url": "https://your-app.vercel.app/api/webhook"
-}
+curl -X POST "https://api.current-rms.com/api/v1/webhooks" \
+  --header "X-SUBDOMAIN: your-subdomain" \
+  --header "X-AUTH-TOKEN: your-api-key" \
+  --header "Content-Type: application/json" \
+  -d '{
+    "webhook": {
+      "name": "Opportunity Convert to Order",
+      "event": "opportunity_convert_to_order",
+      "target_url": "https://your-app.vercel.app/api/webhook",
+      "active": true
+    }
+  }'
 
 // Mark as reserved
-{
-  "event": "opportunity_mark_as_reserved",
-  "target_url": "https://your-app.vercel.app/api/webhook"
-}
+curl -X POST "https://api.current-rms.com/api/v1/webhooks" \
+  --header "X-SUBDOMAIN: your-subdomain" \
+  --header "X-AUTH-TOKEN: your-api-key" \
+  --header "Content-Type: application/json" \
+  -d '{
+    "webhook": {
+      "name": "Opportunity Mark Reserved",
+      "event": "opportunity_mark_as_reserved",
+      "target_url": "https://your-app.vercel.app/api/webhook",
+      "active": true
+    }
+  }'
 
 // Mark as lost
-{
-  "event": "opportunity_mark_as_lost",
-  "target_url": "https://your-app.vercel.app/api/webhook"
-}
+curl -X POST "https://api.current-rms.com/api/v1/webhooks" \
+  --header "X-SUBDOMAIN: your-subdomain" \
+  --header "X-AUTH-TOKEN: your-api-key" \
+  --header "Content-Type: application/json" \
+  -d '{
+    "webhook": {
+      "name": "Opportunity Mark Lost",
+      "event": "opportunity_mark_as_lost",
+      "target_url": "https://your-app.vercel.app/api/webhook",
+      "active": true
+    }
+  }'
 ```
 
 ## Customizing Business Rules

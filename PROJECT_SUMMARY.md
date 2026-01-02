@@ -131,8 +131,10 @@ vercel
 ### 6. Configure Current RMS
 Create a webhook pointing to your Vercel URL:
 ```bash
-curl -X POST "https://api.current-rms.com/api/v1/webhooks?apikey=YOUR_KEY" \
-  -H "Content-Type: application/json" \
+curl -X POST "https://api.current-rms.com/api/v1/webhooks" \
+  --header "X-SUBDOMAIN: your-subdomain" \
+  --header "X-AUTH-TOKEN: your-api-key" \
+  --header "Content-Type: application/json" \
   -d '{
     "webhook": {
       "name": "Opportunity Watcher",
