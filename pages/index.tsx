@@ -11,6 +11,7 @@ import { SyncControl } from '@/components/Dashboard/SyncControl';
 import { RiskStatusSummary } from '@/components/Dashboard/RiskStatusSummary';
 import { RiskLevel } from '@/lib/riskAssessment';
 import { DashboardData, RiskSummaryItem, DebugDiagnostics } from '@/types/dashboard';
+import { DateRangeFilter, DateRange } from '@/components/DateRangeFilter';
 
 export default function Dashboard() {
   const router = useRouter();
@@ -20,12 +21,23 @@ export default function Dashboard() {
   const [autoRefresh, setAutoRefresh] = useState(true);
   const [showDebug, setShowDebug] = useState(false);
   const [debugInfo, setDebugInfo] = useState<DebugDiagnostics | null>(null);
+  const [dateRange, setDateRange] = useState<DateRange>({
+    preset: 'all',
+    startDate: null,
+    endDate: null
+  });
 
   const fetchData = async () => {
     try {
+      // Build query parameters for date filtering
+      const params = new URLSearchParams();
+      if (dateRange.startDate) params.append('startDate', dateRange.startDate);
+      if (dateRange.endDate) params.append('endDate', dateRange.endDate);
+      const queryString = params.toString();
+
       const [dashboardResponse, riskResponse] = await Promise.all([
-        fetch('/api/dashboard'),
-        fetch('/api/risk/summary')
+        fetch(`/api/dashboard${queryString ? `?${queryString}` : ''}`),
+        fetch(`/api/risk/summary${queryString ? `?${queryString}` : ''}`)
       ]);
 
       const dashboardData = await dashboardResponse.json();
@@ -64,7 +76,7 @@ export default function Dashboard() {
       const interval = setInterval(fetchData, 10000); // Refresh every 10 seconds
       return () => clearInterval(interval);
     }
-  }, [autoRefresh]);
+  }, [autoRefresh, dateRange]);
 
   const formatUptime = (seconds: number): string => {
     const hours = Math.floor(seconds / 3600);
@@ -224,6 +236,11 @@ export default function Dashboard() {
               subtitle="System running"
               icon="⏱️"
             />
+          </div>
+
+          {/* Date Range Filter */}
+          <div className="mb-6">
+            <DateRangeFilter value={dateRange} onChange={setDateRange} />
           </div>
 
           {/* Sync Status Indicator */}
