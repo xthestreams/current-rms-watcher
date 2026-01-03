@@ -4,6 +4,7 @@ import Head from 'next/head';
 import { RiskAssessmentModal } from '@/components/RiskAssessment/RiskAssessmentModal';
 import { getRiskLevel, getRiskLevelColor, calculateRiskScore } from '@/lib/riskAssessment';
 import { Opportunity } from '@/types/opportunity';
+import { DateRangeFilter, DateRange } from '@/components/DateRangeFilter';
 
 export default function RiskManagementPage() {
   const router = useRouter();
@@ -14,6 +15,11 @@ export default function RiskManagementPage() {
   const [showAssessmentModal, setShowAssessmentModal] = useState(false);
   const [filterLevel, setFilterLevel] = useState<string>('ALL');
   const [searchTerm, setSearchTerm] = useState('');
+  const [dateRange, setDateRange] = useState<DateRange>({
+    preset: 'all',
+    startDate: null,
+    endDate: null
+  });
 
   useEffect(() => {
     fetchOpportunities();
@@ -21,7 +27,7 @@ export default function RiskManagementPage() {
 
   useEffect(() => {
     filterOpportunities();
-  }, [opportunities, filterLevel, searchTerm]);
+  }, [opportunities, filterLevel, searchTerm, dateRange]);
 
   const fetchOpportunities = async () => {
     setLoading(true);
@@ -41,6 +47,22 @@ export default function RiskManagementPage() {
 
   const filterOpportunities = () => {
     let filtered = [...opportunities];
+
+    // Filter by date range
+    if (dateRange.startDate || dateRange.endDate) {
+      filtered = filtered.filter(opp => {
+        if (!opp.starts_at) return false;
+
+        const oppDate = new Date(opp.starts_at);
+        const startDate = dateRange.startDate ? new Date(dateRange.startDate) : null;
+        const endDate = dateRange.endDate ? new Date(dateRange.endDate) : null;
+
+        if (startDate && oppDate < startDate) return false;
+        if (endDate && oppDate > endDate) return false;
+
+        return true;
+      });
+    }
 
     // Filter by risk level
     if (filterLevel !== 'ALL') {
@@ -200,6 +222,11 @@ export default function RiskManagementPage() {
               <div className="text-2xl font-bold text-gray-600">{stats.unscored}</div>
               <div className="text-sm text-gray-500">Unscored</div>
             </div>
+          </div>
+
+          {/* Date Range Filter */}
+          <div className="mb-6">
+            <DateRangeFilter value={dateRange} onChange={setDateRange} />
           </div>
 
           {/* Filters */}
