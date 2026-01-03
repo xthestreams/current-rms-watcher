@@ -414,11 +414,11 @@ class EventStorePostgres {
       const totalCount = await sql`SELECT COUNT(*) as count FROM opportunities`;
       console.log('[EventStore] Total opportunities in database:', totalCount.rows[0].count);
 
-      // Check how many have risk scores
+      // Check how many have risk scores (use NULLIF to handle empty strings)
       const scoredCount = await sql`
         SELECT COUNT(*) as count
         FROM opportunities
-        WHERE COALESCE(CAST(data->'custom_fields'->>'risk_score' AS DECIMAL), 0) > 0
+        WHERE COALESCE(CAST(NULLIF(data->'custom_fields'->>'risk_score', '') AS DECIMAL), 0) > 0
       `;
       console.log('[EventStore] Opportunities with risk scores:', scoredCount.rows[0].count);
 
@@ -429,10 +429,10 @@ class EventStorePostgres {
         result = await sql`
           SELECT
             CASE
-              WHEN COALESCE(CAST(data->'custom_fields'->>'risk_score' AS DECIMAL), 0) = 0 THEN NULL
-              WHEN CAST(data->'custom_fields'->>'risk_score' AS DECIMAL) <= 2.0 THEN 'LOW'
-              WHEN CAST(data->'custom_fields'->>'risk_score' AS DECIMAL) <= 3.0 THEN 'MEDIUM'
-              WHEN CAST(data->'custom_fields'->>'risk_score' AS DECIMAL) <= 4.0 THEN 'HIGH'
+              WHEN COALESCE(CAST(NULLIF(data->'custom_fields'->>'risk_score', '') AS DECIMAL), 0) = 0 THEN NULL
+              WHEN CAST(NULLIF(data->'custom_fields'->>'risk_score', '') AS DECIMAL) <= 2.0 THEN 'LOW'
+              WHEN CAST(NULLIF(data->'custom_fields'->>'risk_score', '') AS DECIMAL) <= 3.0 THEN 'MEDIUM'
+              WHEN CAST(NULLIF(data->'custom_fields'->>'risk_score', '') AS DECIMAL) <= 4.0 THEN 'HIGH'
               ELSE 'CRITICAL'
             END as level,
             COUNT(*)::int as count,
@@ -441,18 +441,18 @@ class EventStorePostgres {
           WHERE starts_at >= ${startDate}::date AND starts_at <= ${endDate}::date
           GROUP BY
             CASE
-              WHEN COALESCE(CAST(data->'custom_fields'->>'risk_score' AS DECIMAL), 0) = 0 THEN NULL
-              WHEN CAST(data->'custom_fields'->>'risk_score' AS DECIMAL) <= 2.0 THEN 'LOW'
-              WHEN CAST(data->'custom_fields'->>'risk_score' AS DECIMAL) <= 3.0 THEN 'MEDIUM'
-              WHEN CAST(data->'custom_fields'->>'risk_score' AS DECIMAL) <= 4.0 THEN 'HIGH'
+              WHEN COALESCE(CAST(NULLIF(data->'custom_fields'->>'risk_score', '') AS DECIMAL), 0) = 0 THEN NULL
+              WHEN CAST(NULLIF(data->'custom_fields'->>'risk_score', '') AS DECIMAL) <= 2.0 THEN 'LOW'
+              WHEN CAST(NULLIF(data->'custom_fields'->>'risk_score', '') AS DECIMAL) <= 3.0 THEN 'MEDIUM'
+              WHEN CAST(NULLIF(data->'custom_fields'->>'risk_score', '') AS DECIMAL) <= 4.0 THEN 'HIGH'
               ELSE 'CRITICAL'
             END
           ORDER BY
             CASE
-              WHEN COALESCE(CAST(data->'custom_fields'->>'risk_score' AS DECIMAL), 0) = 0 THEN 5
-              WHEN CAST(data->'custom_fields'->>'risk_score' AS DECIMAL) <= 2.0 THEN 4
-              WHEN CAST(data->'custom_fields'->>'risk_score' AS DECIMAL) <= 3.0 THEN 3
-              WHEN CAST(data->'custom_fields'->>'risk_score' AS DECIMAL) <= 4.0 THEN 2
+              WHEN COALESCE(CAST(NULLIF(data->'custom_fields'->>'risk_score', '') AS DECIMAL), 0) = 0 THEN 5
+              WHEN CAST(NULLIF(data->'custom_fields'->>'risk_score', '') AS DECIMAL) <= 2.0 THEN 4
+              WHEN CAST(NULLIF(data->'custom_fields'->>'risk_score', '') AS DECIMAL) <= 3.0 THEN 3
+              WHEN CAST(NULLIF(data->'custom_fields'->>'risk_score', '') AS DECIMAL) <= 4.0 THEN 2
               ELSE 1
             END
         `;
@@ -460,10 +460,10 @@ class EventStorePostgres {
         result = await sql`
           SELECT
             CASE
-              WHEN COALESCE(CAST(data->'custom_fields'->>'risk_score' AS DECIMAL), 0) = 0 THEN NULL
-              WHEN CAST(data->'custom_fields'->>'risk_score' AS DECIMAL) <= 2.0 THEN 'LOW'
-              WHEN CAST(data->'custom_fields'->>'risk_score' AS DECIMAL) <= 3.0 THEN 'MEDIUM'
-              WHEN CAST(data->'custom_fields'->>'risk_score' AS DECIMAL) <= 4.0 THEN 'HIGH'
+              WHEN COALESCE(CAST(NULLIF(data->'custom_fields'->>'risk_score', '') AS DECIMAL), 0) = 0 THEN NULL
+              WHEN CAST(NULLIF(data->'custom_fields'->>'risk_score', '') AS DECIMAL) <= 2.0 THEN 'LOW'
+              WHEN CAST(NULLIF(data->'custom_fields'->>'risk_score', '') AS DECIMAL) <= 3.0 THEN 'MEDIUM'
+              WHEN CAST(NULLIF(data->'custom_fields'->>'risk_score', '') AS DECIMAL) <= 4.0 THEN 'HIGH'
               ELSE 'CRITICAL'
             END as level,
             COUNT(*)::int as count,
@@ -472,18 +472,18 @@ class EventStorePostgres {
           WHERE starts_at >= ${startDate}::date
           GROUP BY
             CASE
-              WHEN COALESCE(CAST(data->'custom_fields'->>'risk_score' AS DECIMAL), 0) = 0 THEN NULL
-              WHEN CAST(data->'custom_fields'->>'risk_score' AS DECIMAL) <= 2.0 THEN 'LOW'
-              WHEN CAST(data->'custom_fields'->>'risk_score' AS DECIMAL) <= 3.0 THEN 'MEDIUM'
-              WHEN CAST(data->'custom_fields'->>'risk_score' AS DECIMAL) <= 4.0 THEN 'HIGH'
+              WHEN COALESCE(CAST(NULLIF(data->'custom_fields'->>'risk_score', '') AS DECIMAL), 0) = 0 THEN NULL
+              WHEN CAST(NULLIF(data->'custom_fields'->>'risk_score', '') AS DECIMAL) <= 2.0 THEN 'LOW'
+              WHEN CAST(NULLIF(data->'custom_fields'->>'risk_score', '') AS DECIMAL) <= 3.0 THEN 'MEDIUM'
+              WHEN CAST(NULLIF(data->'custom_fields'->>'risk_score', '') AS DECIMAL) <= 4.0 THEN 'HIGH'
               ELSE 'CRITICAL'
             END
           ORDER BY
             CASE
-              WHEN COALESCE(CAST(data->'custom_fields'->>'risk_score' AS DECIMAL), 0) = 0 THEN 5
-              WHEN CAST(data->'custom_fields'->>'risk_score' AS DECIMAL) <= 2.0 THEN 4
-              WHEN CAST(data->'custom_fields'->>'risk_score' AS DECIMAL) <= 3.0 THEN 3
-              WHEN CAST(data->'custom_fields'->>'risk_score' AS DECIMAL) <= 4.0 THEN 2
+              WHEN COALESCE(CAST(NULLIF(data->'custom_fields'->>'risk_score', '') AS DECIMAL), 0) = 0 THEN 5
+              WHEN CAST(NULLIF(data->'custom_fields'->>'risk_score', '') AS DECIMAL) <= 2.0 THEN 4
+              WHEN CAST(NULLIF(data->'custom_fields'->>'risk_score', '') AS DECIMAL) <= 3.0 THEN 3
+              WHEN CAST(NULLIF(data->'custom_fields'->>'risk_score', '') AS DECIMAL) <= 4.0 THEN 2
               ELSE 1
             END
         `;
@@ -491,10 +491,10 @@ class EventStorePostgres {
         result = await sql`
           SELECT
             CASE
-              WHEN COALESCE(CAST(data->'custom_fields'->>'risk_score' AS DECIMAL), 0) = 0 THEN NULL
-              WHEN CAST(data->'custom_fields'->>'risk_score' AS DECIMAL) <= 2.0 THEN 'LOW'
-              WHEN CAST(data->'custom_fields'->>'risk_score' AS DECIMAL) <= 3.0 THEN 'MEDIUM'
-              WHEN CAST(data->'custom_fields'->>'risk_score' AS DECIMAL) <= 4.0 THEN 'HIGH'
+              WHEN COALESCE(CAST(NULLIF(data->'custom_fields'->>'risk_score', '') AS DECIMAL), 0) = 0 THEN NULL
+              WHEN CAST(NULLIF(data->'custom_fields'->>'risk_score', '') AS DECIMAL) <= 2.0 THEN 'LOW'
+              WHEN CAST(NULLIF(data->'custom_fields'->>'risk_score', '') AS DECIMAL) <= 3.0 THEN 'MEDIUM'
+              WHEN CAST(NULLIF(data->'custom_fields'->>'risk_score', '') AS DECIMAL) <= 4.0 THEN 'HIGH'
               ELSE 'CRITICAL'
             END as level,
             COUNT(*)::int as count,
@@ -503,18 +503,18 @@ class EventStorePostgres {
           WHERE starts_at <= ${endDate}::date
           GROUP BY
             CASE
-              WHEN COALESCE(CAST(data->'custom_fields'->>'risk_score' AS DECIMAL), 0) = 0 THEN NULL
-              WHEN CAST(data->'custom_fields'->>'risk_score' AS DECIMAL) <= 2.0 THEN 'LOW'
-              WHEN CAST(data->'custom_fields'->>'risk_score' AS DECIMAL) <= 3.0 THEN 'MEDIUM'
-              WHEN CAST(data->'custom_fields'->>'risk_score' AS DECIMAL) <= 4.0 THEN 'HIGH'
+              WHEN COALESCE(CAST(NULLIF(data->'custom_fields'->>'risk_score', '') AS DECIMAL), 0) = 0 THEN NULL
+              WHEN CAST(NULLIF(data->'custom_fields'->>'risk_score', '') AS DECIMAL) <= 2.0 THEN 'LOW'
+              WHEN CAST(NULLIF(data->'custom_fields'->>'risk_score', '') AS DECIMAL) <= 3.0 THEN 'MEDIUM'
+              WHEN CAST(NULLIF(data->'custom_fields'->>'risk_score', '') AS DECIMAL) <= 4.0 THEN 'HIGH'
               ELSE 'CRITICAL'
             END
           ORDER BY
             CASE
-              WHEN COALESCE(CAST(data->'custom_fields'->>'risk_score' AS DECIMAL), 0) = 0 THEN 5
-              WHEN CAST(data->'custom_fields'->>'risk_score' AS DECIMAL) <= 2.0 THEN 4
-              WHEN CAST(data->'custom_fields'->>'risk_score' AS DECIMAL) <= 3.0 THEN 3
-              WHEN CAST(data->'custom_fields'->>'risk_score' AS DECIMAL) <= 4.0 THEN 2
+              WHEN COALESCE(CAST(NULLIF(data->'custom_fields'->>'risk_score', '') AS DECIMAL), 0) = 0 THEN 5
+              WHEN CAST(NULLIF(data->'custom_fields'->>'risk_score', '') AS DECIMAL) <= 2.0 THEN 4
+              WHEN CAST(NULLIF(data->'custom_fields'->>'risk_score', '') AS DECIMAL) <= 3.0 THEN 3
+              WHEN CAST(NULLIF(data->'custom_fields'->>'risk_score', '') AS DECIMAL) <= 4.0 THEN 2
               ELSE 1
             END
         `;
@@ -523,10 +523,10 @@ class EventStorePostgres {
         result = await sql`
           SELECT
             CASE
-              WHEN COALESCE(CAST(data->'custom_fields'->>'risk_score' AS DECIMAL), 0) = 0 THEN NULL
-              WHEN CAST(data->'custom_fields'->>'risk_score' AS DECIMAL) <= 2.0 THEN 'LOW'
-              WHEN CAST(data->'custom_fields'->>'risk_score' AS DECIMAL) <= 3.0 THEN 'MEDIUM'
-              WHEN CAST(data->'custom_fields'->>'risk_score' AS DECIMAL) <= 4.0 THEN 'HIGH'
+              WHEN COALESCE(CAST(NULLIF(data->'custom_fields'->>'risk_score', '') AS DECIMAL), 0) = 0 THEN NULL
+              WHEN CAST(NULLIF(data->'custom_fields'->>'risk_score', '') AS DECIMAL) <= 2.0 THEN 'LOW'
+              WHEN CAST(NULLIF(data->'custom_fields'->>'risk_score', '') AS DECIMAL) <= 3.0 THEN 'MEDIUM'
+              WHEN CAST(NULLIF(data->'custom_fields'->>'risk_score', '') AS DECIMAL) <= 4.0 THEN 'HIGH'
               ELSE 'CRITICAL'
             END as level,
             COUNT(*)::int as count,
@@ -534,18 +534,18 @@ class EventStorePostgres {
           FROM opportunities
           GROUP BY
             CASE
-              WHEN COALESCE(CAST(data->'custom_fields'->>'risk_score' AS DECIMAL), 0) = 0 THEN NULL
-              WHEN CAST(data->'custom_fields'->>'risk_score' AS DECIMAL) <= 2.0 THEN 'LOW'
-              WHEN CAST(data->'custom_fields'->>'risk_score' AS DECIMAL) <= 3.0 THEN 'MEDIUM'
-              WHEN CAST(data->'custom_fields'->>'risk_score' AS DECIMAL) <= 4.0 THEN 'HIGH'
+              WHEN COALESCE(CAST(NULLIF(data->'custom_fields'->>'risk_score', '') AS DECIMAL), 0) = 0 THEN NULL
+              WHEN CAST(NULLIF(data->'custom_fields'->>'risk_score', '') AS DECIMAL) <= 2.0 THEN 'LOW'
+              WHEN CAST(NULLIF(data->'custom_fields'->>'risk_score', '') AS DECIMAL) <= 3.0 THEN 'MEDIUM'
+              WHEN CAST(NULLIF(data->'custom_fields'->>'risk_score', '') AS DECIMAL) <= 4.0 THEN 'HIGH'
               ELSE 'CRITICAL'
             END
           ORDER BY
             CASE
-              WHEN COALESCE(CAST(data->'custom_fields'->>'risk_score' AS DECIMAL), 0) = 0 THEN 5
-              WHEN CAST(data->'custom_fields'->>'risk_score' AS DECIMAL) <= 2.0 THEN 4
-              WHEN CAST(data->'custom_fields'->>'risk_score' AS DECIMAL) <= 3.0 THEN 3
-              WHEN CAST(data->'custom_fields'->>'risk_score' AS DECIMAL) <= 4.0 THEN 2
+              WHEN COALESCE(CAST(NULLIF(data->'custom_fields'->>'risk_score', '') AS DECIMAL), 0) = 0 THEN 5
+              WHEN CAST(NULLIF(data->'custom_fields'->>'risk_score', '') AS DECIMAL) <= 2.0 THEN 4
+              WHEN CAST(NULLIF(data->'custom_fields'->>'risk_score', '') AS DECIMAL) <= 3.0 THEN 3
+              WHEN CAST(NULLIF(data->'custom_fields'->>'risk_score', '') AS DECIMAL) <= 4.0 THEN 2
               ELSE 1
             END
         `;
@@ -583,7 +583,7 @@ class EventStorePostgres {
             id, name, subject, organisation_name, owner_name,
             starts_at, charge_total, data
           FROM opportunities
-          WHERE COALESCE(CAST(data->'custom_fields'->>'risk_score' AS DECIMAL), 0) = 0
+          WHERE COALESCE(CAST(NULLIF(data->'custom_fields'->>'risk_score', '') AS DECIMAL), 0) = 0
           ORDER BY starts_at ASC
           LIMIT ${limit}
         `;
@@ -596,9 +596,9 @@ class EventStorePostgres {
               id, name, subject, organisation_name, owner_name,
               starts_at, charge_total, data
             FROM opportunities
-            WHERE CAST(data->'custom_fields'->>'risk_score' AS DECIMAL) > 0
-              AND CAST(data->'custom_fields'->>'risk_score' AS DECIMAL) <= 2.0
-            ORDER BY CAST(data->'custom_fields'->>'risk_score' AS DECIMAL) DESC, starts_at ASC
+            WHERE CAST(NULLIF(data->'custom_fields'->>'risk_score', '') AS DECIMAL) > 0
+              AND CAST(NULLIF(data->'custom_fields'->>'risk_score', '') AS DECIMAL) <= 2.0
+            ORDER BY CAST(NULLIF(data->'custom_fields'->>'risk_score', '') AS DECIMAL) DESC, starts_at ASC
             LIMIT ${limit}
           `;
         } else if (riskLevel === 'MEDIUM') {
@@ -607,9 +607,9 @@ class EventStorePostgres {
               id, name, subject, organisation_name, owner_name,
               starts_at, charge_total, data
             FROM opportunities
-            WHERE CAST(data->'custom_fields'->>'risk_score' AS DECIMAL) > 2.0
-              AND CAST(data->'custom_fields'->>'risk_score' AS DECIMAL) <= 3.0
-            ORDER BY CAST(data->'custom_fields'->>'risk_score' AS DECIMAL) DESC, starts_at ASC
+            WHERE CAST(NULLIF(data->'custom_fields'->>'risk_score', '') AS DECIMAL) > 2.0
+              AND CAST(NULLIF(data->'custom_fields'->>'risk_score', '') AS DECIMAL) <= 3.0
+            ORDER BY CAST(NULLIF(data->'custom_fields'->>'risk_score', '') AS DECIMAL) DESC, starts_at ASC
             LIMIT ${limit}
           `;
         } else if (riskLevel === 'HIGH') {
@@ -618,9 +618,9 @@ class EventStorePostgres {
               id, name, subject, organisation_name, owner_name,
               starts_at, charge_total, data
             FROM opportunities
-            WHERE CAST(data->'custom_fields'->>'risk_score' AS DECIMAL) > 3.0
-              AND CAST(data->'custom_fields'->>'risk_score' AS DECIMAL) <= 4.0
-            ORDER BY CAST(data->'custom_fields'->>'risk_score' AS DECIMAL) DESC, starts_at ASC
+            WHERE CAST(NULLIF(data->'custom_fields'->>'risk_score', '') AS DECIMAL) > 3.0
+              AND CAST(NULLIF(data->'custom_fields'->>'risk_score', '') AS DECIMAL) <= 4.0
+            ORDER BY CAST(NULLIF(data->'custom_fields'->>'risk_score', '') AS DECIMAL) DESC, starts_at ASC
             LIMIT ${limit}
           `;
         } else if (riskLevel === 'CRITICAL') {
@@ -629,8 +629,8 @@ class EventStorePostgres {
               id, name, subject, organisation_name, owner_name,
               starts_at, charge_total, data
             FROM opportunities
-            WHERE CAST(data->'custom_fields'->>'risk_score' AS DECIMAL) > 4.0
-            ORDER BY CAST(data->'custom_fields'->>'risk_score' AS DECIMAL) DESC, starts_at ASC
+            WHERE CAST(NULLIF(data->'custom_fields'->>'risk_score', '') AS DECIMAL) > 4.0
+            ORDER BY CAST(NULLIF(data->'custom_fields'->>'risk_score', '') AS DECIMAL) DESC, starts_at ASC
             LIMIT ${limit}
           `;
         } else {
