@@ -126,10 +126,13 @@ export class CurrentRMSClient {
       if (response.opportunities && response.opportunities.length > 0) {
         allOpportunities.push(...response.opportunities);
 
-        // Check if there are more pages
-        const totalPages = response.meta?.total_pages || 1;
-        const currentPage = response.meta?.current_page || page;
-        console.log(`[CurrentRMS] Pagination: page ${currentPage} of ${totalPages}`);
+        // Current RMS uses total_row_count, not total_pages
+        // Calculate total pages from total_row_count and per_page
+        const totalRowCount = response.meta?.total_row_count || 0;
+        const perPage = response.meta?.per_page || 100;
+        const totalPages = totalRowCount > 0 ? Math.ceil(totalRowCount / perPage) : 1;
+
+        console.log(`[CurrentRMS] Pagination: page ${page} of ${totalPages} (${totalRowCount} total records, ${perPage} per page)`);
 
         hasMore = page < totalPages;
         page++;
