@@ -146,18 +146,14 @@ async function setupWebhooks() {
     process.exit(1);
   }
 
-  // Use stable production URL
-  // VERCEL_PROJECT_PRODUCTION_URL is the stable production domain
-  // VERCEL_URL is the deployment-specific URL (changes per deployment)
-  const productionUrl = process.env.VERCEL_PROJECT_PRODUCTION_URL || process.env.VERCEL_PRODUCTION_URL || 'current-rms-watcher.vercel.app';
+  // Use hardcoded stable production URL
+  // This ensures webhooks always point to the production domain
+  const productionUrl = 'current-rms-watcher.vercel.app';
   const targetUrl = `https://${productionUrl}/api/webhook`;
 
   console.log('📋 Configuration:');
   console.log(`   Subdomain: ${config.subdomain}`);
   console.log(`   Target URL: ${targetUrl}`);
-  console.log(`   VERCEL_PROJECT_PRODUCTION_URL: ${process.env.VERCEL_PROJECT_PRODUCTION_URL || 'not set'}`);
-  console.log(`   VERCEL_PRODUCTION_URL: ${process.env.VERCEL_PRODUCTION_URL || 'not set'}`);
-  console.log(`   VERCEL_URL: ${process.env.VERCEL_URL || 'not set'}`);
   console.log(`   Environment: ${config.isDevelopment ? 'Development' : 'Production'}\n`);
 
   // Get existing webhooks
