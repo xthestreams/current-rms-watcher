@@ -61,8 +61,8 @@ export default async function handler(
       console.error('❌ Error processing event:', error);
     }
 
-    // Store the event (after processing so we have the final state)
-    await eventStore.addEvent(processedEvent);
+    // Store the event with raw payload (after processing so we have the final state)
+    await eventStore.addEvent(processedEvent, payload);
 
     // Return 200 OK quickly (webhook best practice)
     return res.status(200).json({
