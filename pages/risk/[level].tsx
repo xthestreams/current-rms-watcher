@@ -153,7 +153,7 @@ export default function RiskLevelPage() {
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
                   {opportunities.map((opp) => {
-                    const riskScore = opp.data?.custom_fields?.risk_score;
+                    const riskScore = opp.data?.custom_fields?.risk_score ?? 0;
                     const reviewed = opp.data?.custom_fields?.risk_reviewed === 'Yes';
 
                     return (
@@ -178,8 +178,8 @@ export default function RiskLevelPage() {
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="flex items-center gap-2">
-                            {riskScore ? (
-                              <span className="text-sm font-medium">{parseFloat(riskScore).toFixed(2)}</span>
+                            {riskScore > 0 ? (
+                              <span className="text-sm font-medium">{riskScore.toFixed(2)}</span>
                             ) : (
                               <span className="text-sm text-gray-400">Not assessed</span>
                             )}
