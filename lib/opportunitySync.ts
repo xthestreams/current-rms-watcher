@@ -12,6 +12,13 @@ export interface SyncResult {
   error?: string;
   startedAt: Date;
   completedAt?: Date;
+  logs?: string[];
+  firstFailure?: {
+    error: string;
+    opportunityId: number;
+    opportunityKeys: string[];
+    opportunityData: any;
+  };
 }
 
 export class OpportunitySync {
@@ -24,6 +31,13 @@ export class OpportunitySync {
     let syncId: number | undefined;
     let recordsSynced = 0;
     let recordsFailed = 0;
+    const logs: string[] = [];
+    let firstFailure: SyncResult['firstFailure'] = undefined;
+
+    const addLog = (message: string) => {
+      console.log(message);
+      logs.push(message);
+    };
 
     try {
       // Create sync record
@@ -34,17 +48,17 @@ export class OpportunitySync {
       `;
       syncId = syncRecord.rows[0].id;
 
-      console.log(`[OpportunitySync] Starting initial sync (ID: ${syncId})`);
+      addLog(`[OpportunitySync] Starting initial sync (ID: ${syncId})`);
 
       // Get date range
       const { startDate, endDate } = getDefaultDateRange();
-      console.log(`[OpportunitySync] Date range: ${startDate} to ${endDate}`);
+      addLog(`[OpportunitySync] Date range: ${startDate} to ${endDate}`);
 
       // Fetch all opportunities from Current RMS
       const client = getCurrentRMSClient();
       const opportunities = await client.getAllOpportunities(startDate, endDate);
 
-      console.log(`[OpportunitySync] Fetched ${opportunities.length} opportunities from Current RMS`);
+      addLog(`[OpportunitySync] Fetched ${opportunities.length} opportunities from Current RMS`);
 
       // Upsert each opportunity
       for (const opp of opportunities) {
@@ -52,22 +66,24 @@ export class OpportunitySync {
           await this.upsertOpportunity(opp);
           recordsSynced++;
           if (recordsSynced === 1) {
-            // Log first successful opportunity structure for debugging
-            console.log(`[OpportunitySync] First opportunity structure:`, JSON.stringify(opp, null, 2));
+            addLog(`[OpportunitySync] ✅ First opportunity synced successfully (ID: ${opp.id})`);
           }
         } catch (error) {
-          console.error(`[OpportunitySync] Failed to sync opportunity ${opp.id}:`, error);
-          console.error(`[OpportunitySync] Opportunity data:`, JSON.stringify(opp, null, 2));
+          const errorMessage = error instanceof Error ? error.message : String(error);
+          addLog(`[OpportunitySync] ❌ Failed to sync opportunity ${opp.id}: ${errorMessage}`);
           recordsFailed++;
 
-          // Log first failure in detail
+          // Capture first failure in detail
           if (recordsFailed === 1) {
-            console.error(`[OpportunitySync] First failure details:`, {
-              error: error instanceof Error ? error.message : String(error),
-              stack: error instanceof Error ? error.stack : undefined,
+            firstFailure = {
+              error: errorMessage,
               opportunityId: opp.id,
-              opportunityKeys: Object.keys(opp)
-            });
+              opportunityKeys: Object.keys(opp),
+              opportunityData: opp
+            };
+            addLog(`[OpportunitySync] First failure details captured`);
+            addLog(`[OpportunitySync] Error: ${errorMessage}`);
+            addLog(`[OpportunitySync] Opportunity keys: ${Object.keys(opp).join(', ')}`);
           }
         }
       }
@@ -84,7 +100,7 @@ export class OpportunitySync {
         WHERE id = ${syncId}
       `;
 
-      console.log(`[OpportunitySync] Initial sync completed: ${recordsSynced} synced, ${recordsFailed} failed`);
+      addLog(`[OpportunitySync] Initial sync completed: ${recordsSynced} synced, ${recordsFailed} failed`);
 
       return {
         success: true,
@@ -92,7 +108,9 @@ export class OpportunitySync {
         recordsSynced,
         recordsFailed,
         startedAt,
-        completedAt
+        completedAt,
+        logs,
+        firstFailure
       };
 
     } catch (error) {

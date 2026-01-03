@@ -26,7 +26,9 @@ export default async function handler(
         recordsFailed: result.recordsFailed,
         duration: result.completedAt
           ? Math.round((result.completedAt.getTime() - result.startedAt.getTime()) / 1000)
-          : null
+          : null,
+        logs: result.logs,
+        firstFailure: result.firstFailure
       });
     } else {
       return res.status(500).json({
@@ -34,7 +36,9 @@ export default async function handler(
         message: 'Initial sync failed',
         error: result.error,
         recordsSynced: result.recordsSynced,
-        recordsFailed: result.recordsFailed
+        recordsFailed: result.recordsFailed,
+        logs: result.logs,
+        firstFailure: result.firstFailure
       });
     }
   } catch (error) {

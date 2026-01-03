@@ -36,16 +36,33 @@ export default function DebugPage() {
 
       const data = await response.json();
 
-      addLog('📦 Response data received');
-      addLog(JSON.stringify(data, null, 2));
+      // Add server logs first
+      if (data.logs && Array.isArray(data.logs)) {
+        addLog('');
+        addLog('📋 Server Logs:');
+        data.logs.forEach((log: string) => addLog(log));
+        addLog('');
+      }
 
       setSyncResult(data);
 
       if (data.success) {
-        addLog(`✅ Sync completed successfully!`);
+        addLog(`✅ Sync completed!`);
         addLog(`   Records synced: ${data.recordsSynced}`);
         addLog(`   Records failed: ${data.recordsFailed}`);
         addLog(`   Duration: ${data.duration}s`);
+
+        // Show first failure details if available
+        if (data.firstFailure) {
+          addLog('');
+          addLog('🔍 First Failure Analysis:');
+          addLog(`   Opportunity ID: ${data.firstFailure.opportunityId}`);
+          addLog(`   Error: ${data.firstFailure.error}`);
+          addLog(`   Available fields: ${data.firstFailure.opportunityKeys.join(', ')}`);
+          addLog('');
+          addLog('   Full opportunity data:');
+          addLog(JSON.stringify(data.firstFailure.opportunityData, null, 2));
+        }
       } else {
         addLog(`❌ Sync failed: ${data.error || data.message}`);
       }
