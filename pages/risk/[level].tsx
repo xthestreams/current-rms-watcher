@@ -153,7 +153,8 @@ export default function RiskLevelPage() {
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
                   {opportunities.map((opp) => {
-                    const riskScore = opp.data?.custom_fields?.risk_score ?? 0;
+                    const rawScore = opp.data?.custom_fields?.risk_score;
+                    const riskScore = typeof rawScore === 'number' ? rawScore : 0;
                     const reviewed = opp.data?.custom_fields?.risk_reviewed === 'Yes';
 
                     return (

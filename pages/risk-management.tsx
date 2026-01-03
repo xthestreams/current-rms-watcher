@@ -45,7 +45,8 @@ export default function RiskManagementPage() {
     // Filter by risk level
     if (filterLevel !== 'ALL') {
       filtered = filtered.filter(opp => {
-        const riskScore = opp.data?.custom_fields?.risk_score ?? 0;
+        const rawScore = opp.data?.custom_fields?.risk_score;
+        const riskScore = typeof rawScore === 'number' ? rawScore : 0;
         const level = getRiskLevel(riskScore);
 
         if (filterLevel === 'UNSCORED') {
@@ -106,7 +107,8 @@ export default function RiskManagementPage() {
     };
 
     opportunities.forEach(opp => {
-      const riskScore = opp.data?.custom_fields?.risk_score ?? 0;
+      const rawScore = opp.data?.custom_fields?.risk_score;
+      const riskScore = typeof rawScore === 'number' ? rawScore : 0;
       const level = getRiskLevel(riskScore);
       const value = parseFloat(opp.charge_total?.toString() || '0');
 
@@ -273,7 +275,8 @@ export default function RiskManagementPage() {
                     </tr>
                   ) : (
                     filteredOpportunities.map((opp) => {
-                      const riskScore = opp.data?.custom_fields?.risk_score ?? 0;
+                      const rawScore = opp.data?.custom_fields?.risk_score;
+                      const riskScore = typeof rawScore === 'number' ? rawScore : 0;
                       const riskLevel = getRiskLevel(riskScore);
                       const colors = getRiskLevelColor(riskLevel);
 
