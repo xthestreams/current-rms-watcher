@@ -3,7 +3,7 @@
 
 const SUBDOMAIN = process.env.CURRENT_RMS_SUBDOMAIN;
 const API_KEY = process.env.CURRENT_RMS_API_KEY;
-const BASE_URL = `https://${SUBDOMAIN}.current-rms.com/api/v1`;
+const BASE_URL = `https://api.current-rms.com/api/v1`;
 
 interface CurrentRMSOpportunity {
   id: number;
