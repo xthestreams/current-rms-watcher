@@ -362,7 +362,7 @@ class EventStorePostgres {
       };
     }
 
-    try{
+    try {
       const [totalResult, successResult, failedResult, lastEventResult] = await Promise.all([
         sql`SELECT COUNT(*) as count FROM webhook_events`,
         sql`SELECT COUNT(*) as count FROM webhook_events WHERE processed = true AND error IS NULL`,
@@ -939,14 +939,16 @@ class EventStorePostgres {
         statuses,
         timeline,
         topOpps,
-        recentActivity
+        recentActivity,
+        lastSync
       ] = await Promise.all([
         this.getMetrics(),
         this.getActionTypeDistribution(),
         this.getOpportunityStatusDistribution(), // Use synced opportunities instead of augmented
         this.getEventsTimeline(7),
         this.getTopOpportunitiesByActivity(10),
-        this.getRecentActivity(20)
+        this.getRecentActivity(20),
+        this.getLastCompletedSync()
       ]);
 
       // Calculate total opportunities from opportunities table (includes synced data)
@@ -973,7 +975,12 @@ class EventStorePostgres {
         statusDistribution: statuses,
         timeline,
         topOpportunities: topOpps,
-        recentActivity
+        recentActivity,
+        syncInfo: lastSync ? {
+          lastSyncTime: lastSync.completedAt,
+          recordsSynced: lastSync.recordsSynced,
+          recordsFailed: lastSync.recordsFailed
+        } : null
       };
     } catch (error) {
       console.error('[EventStore] Error fetching dashboard metrics:', error);
@@ -1050,6 +1057,74 @@ class EventStorePostgres {
     } catch (error) {
       console.error('[EventStore] Error fetching opportunities by date range:', error);
       return [];
+    }
+  }
+
+  // Get last sync timestamp from opportunities table
+  async getLastSyncTimestamp(): Promise<Date | null> {
+    await this.initialize();
+
+    if (!process.env.POSTGRES_URL) {
+      return null;
+    }
+
+    try {
+      const result = await sql`
+        SELECT MAX(synced_at) as last_sync
+        FROM opportunities
+      `;
+
+      if (result.rows.length > 0 && result.rows[0].last_sync) {
+        return new Date(result.rows[0].last_sync);
+      }
+
+      return null;
+    } catch (error) {
+      console.error('[EventStore] Error fetching last sync timestamp:', error);
+      return null;
+    }
+  }
+
+  // Get last sync from sync_metadata table
+  async getLastCompletedSync(syncType: string = 'opportunities'): Promise<{
+    startedAt: Date;
+    completedAt: Date;
+    recordsSynced: number;
+    recordsFailed: number;
+  } | null> {
+    await this.initialize();
+
+    if (!process.env.POSTGRES_URL) {
+      return null;
+    }
+
+    try {
+      const result = await sql`
+        SELECT
+          started_at,
+          completed_at,
+          records_synced,
+          records_failed
+        FROM sync_metadata
+        WHERE sync_type = ${syncType}
+          AND status = 'completed'
+        ORDER BY completed_at DESC
+        LIMIT 1
+      `;
+
+      if (result.rows.length > 0) {
+        return {
+          startedAt: new Date(result.rows[0].started_at),
+          completedAt: new Date(result.rows[0].completed_at),
+          recordsSynced: result.rows[0].records_synced,
+          recordsFailed: result.rows[0].records_failed
+        };
+      }
+
+      return null;
+    } catch (error) {
+      console.error('[EventStore] Error fetching last completed sync:', error);
+      return null;
     }
   }
 }

@@ -3,17 +3,7 @@ import { useRouter } from 'next/router';
 import Head from 'next/head';
 import { RiskAssessmentModal } from '@/components/RiskAssessment/RiskAssessmentModal';
 import { getRiskLevel, getRiskLevelColor, calculateRiskScore } from '@/lib/riskAssessment';
-
-interface Opportunity {
-  id: number;
-  name: string;
-  subject?: string;
-  organisation_name?: string;
-  owner_name?: string;
-  starts_at?: string;
-  charge_total?: string;
-  data?: any;
-}
+import { Opportunity } from '@/types/opportunity';
 
 export default function RiskManagementPage() {
   const router = useRouter();

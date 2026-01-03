@@ -10,16 +10,16 @@ import { ActivityFeed } from '@/components/Dashboard/ActivityFeed';
 import { SyncControl } from '@/components/Dashboard/SyncControl';
 import { RiskStatusSummary } from '@/components/Dashboard/RiskStatusSummary';
 import { RiskLevel } from '@/lib/riskAssessment';
+import { DashboardData, RiskSummaryItem, DebugDiagnostics } from '@/types/dashboard';
 
 export default function Dashboard() {
   const router = useRouter();
-  const [dashboardData, setDashboardData] = useState<any>(null);
-  const [riskSummaryData, setRiskSummaryData] = useState<any[]>([]);
+  const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
+  const [riskSummaryData, setRiskSummaryData] = useState<RiskSummaryItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [autoRefresh, setAutoRefresh] = useState(true);
   const [showDebug, setShowDebug] = useState(false);
-  const [debugInfo, setDebugInfo] = useState<any>(null);
-  const [testWebhookStatus, setTestWebhookStatus] = useState<string>('');
+  const [debugInfo, setDebugInfo] = useState<DebugDiagnostics | null>(null);
 
   const fetchData = async () => {
     try {
@@ -54,29 +54,6 @@ export default function Dashboard() {
       setShowDebug(true);
     } catch (error) {
       console.error('Error fetching debug info:', error);
-    }
-  };
-
-  const sendTestWebhook = async () => {
-    setTestWebhookStatus('sending');
-    try {
-      const response = await fetch('/api/test-webhook', { method: 'POST' });
-      const data = await response.json();
-
-      if (data.success) {
-        setTestWebhookStatus('success');
-        setTimeout(() => {
-          setTestWebhookStatus('');
-          fetchData();
-        }, 2000);
-      } else {
-        setTestWebhookStatus('error');
-        setTimeout(() => setTestWebhookStatus(''), 3000);
-      }
-    } catch (error) {
-      console.error('Error sending test webhook:', error);
-      setTestWebhookStatus('error');
-      setTimeout(() => setTestWebhookStatus(''), 3000);
     }
   };
 
@@ -141,13 +118,6 @@ export default function Dashboard() {
                   />
                   Auto-refresh (10s)
                 </label>
-                <button
-                  onClick={sendTestWebhook}
-                  disabled={testWebhookStatus === 'sending'}
-                  className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {testWebhookStatus === 'sending' ? 'Sending...' : testWebhookStatus === 'success' ? '✓ Sent!' : 'Test Webhook'}
-                </button>
                 <button
                   onClick={() => router.push('/settings')}
                   className="px-4 py-2 bg-white bg-opacity-20 text-white rounded-lg hover:bg-opacity-30 transition-colors flex items-center gap-2"
@@ -255,6 +225,39 @@ export default function Dashboard() {
               icon="⏱️"
             />
           </div>
+
+          {/* Sync Status Indicator */}
+          {dashboardData?.syncInfo && (
+            <div className="mb-6 bg-blue-50 border-l-4 border-blue-500 p-4 rounded-lg">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  </svg>
+                  <div>
+                    <div className="text-sm font-medium text-blue-900">
+                      Last Sync: {new Date(dashboardData.syncInfo.lastSyncTime).toLocaleString()}
+                    </div>
+                    <div className="text-xs text-blue-700">
+                      {dashboardData.syncInfo.recordsSynced} opportunities synced
+                      {dashboardData.syncInfo.recordsFailed > 0 && ` · ${dashboardData.syncInfo.recordsFailed} failed`}
+                    </div>
+                  </div>
+                </div>
+                <div className="text-xs text-blue-600">
+                  {(() => {
+                    const lastSync = new Date(dashboardData.syncInfo.lastSyncTime);
+                    const now = new Date();
+                    const diffMinutes = Math.floor((now.getTime() - lastSync.getTime()) / 60000);
+                    if (diffMinutes < 1) return 'Just now';
+                    if (diffMinutes < 60) return `${diffMinutes} min ago`;
+                    const diffHours = Math.floor(diffMinutes / 60);
+                    return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`;
+                  })()}
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Charts Row 1 */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">

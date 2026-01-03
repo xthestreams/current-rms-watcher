@@ -10,18 +10,7 @@ import {
   RiskAssessmentData,
   RiskLevel
 } from '@/lib/riskAssessment';
-
-interface Opportunity {
-  id: number;
-  name: string;
-  subject?: string;
-  organisation_name?: string;
-  starts_at?: string;
-  charge_total?: string;
-  data?: {
-    custom_fields?: RiskAssessmentData;
-  };
-}
+import { Opportunity } from '@/types/opportunity';
 
 interface RiskAssessmentModalProps {
   opportunity: Opportunity | null;

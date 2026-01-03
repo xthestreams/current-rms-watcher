@@ -2,7 +2,7 @@
 // Update risk assessment for an opportunity in Current RMS
 
 import { NextApiRequest, NextApiResponse } from 'next';
-import { RiskAssessmentData } from '@/lib/riskAssessment';
+import { RiskAssessmentData, validateRiskScores, calculateRiskScore, getRiskLevel } from '@/lib/riskAssessment';
 
 const SUBDOMAIN = process.env.CURRENT_RMS_SUBDOMAIN;
 const API_KEY = process.env.CURRENT_RMS_API_KEY;
@@ -22,6 +22,27 @@ export default async function handler(
   if (!id || typeof id !== 'string') {
     return res.status(400).json({ error: 'Invalid opportunity ID' });
   }
+
+  // Validate risk data
+  if (!riskData) {
+    return res.status(400).json({ error: 'Risk assessment data is required' });
+  }
+
+  // Validate risk scores using library function
+  if (!validateRiskScores(riskData)) {
+    return res.status(400).json({
+      error: 'Invalid risk scores',
+      details: 'All risk scores must be integers between 1 and 5'
+    });
+  }
+
+  // Recalculate risk score to ensure consistency
+  const calculatedScore = calculateRiskScore(riskData);
+  const riskLevel = getRiskLevel(calculatedScore);
+
+  // Update risk data with calculated values
+  riskData.risk_score = calculatedScore;
+  riskData.risk_level = riskLevel || '';
 
   if (!SUBDOMAIN || !API_KEY) {
     console.error('Missing Current RMS credentials');

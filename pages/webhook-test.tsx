@@ -1,11 +1,12 @@
 import { useState } from 'react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
+import { WebhookTestResults } from '@/types/webhook';
 
 export default function WebhookTestPage() {
   const router = useRouter();
   const [testing, setTesting] = useState(false);
-  const [results, setResults] = useState<any>(null);
+  const [results, setResults] = useState<WebhookTestResults | null>(null);
 
   const runTest = async () => {
     setTesting(true);

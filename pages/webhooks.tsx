@@ -1,12 +1,42 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
+import { WebhookTestResults } from '@/types/webhook';
+
+interface WebhookDiagnostics {
+  timestamp: string;
+  environment: Record<string, unknown>;
+  webhookEndpoint: Record<string, unknown>;
+  currentRmsConnection: {
+    status: string;
+    totalWebhooks?: number;
+    watcherWebhooks?: number;
+    webhooks?: Array<{
+      id: number;
+      name: string;
+      event: string;
+      target_url: string;
+      active: boolean;
+    }>;
+    message?: string;
+    error?: string;
+  };
+  recommendations: Array<{
+    severity: string;
+    issue: string;
+    details: string;
+    action: string;
+  }>;
+  overallHealth: string;
+}
 
 export default function WebhookDebugPage() {
   const router = useRouter();
-  const [diagnostics, setDiagnostics] = useState<any>(null);
+  const [diagnostics, setDiagnostics] = useState<WebhookDiagnostics | null>(null);
+  const [diagnosticTestResults, setDiagnosticTestResults] = useState<WebhookTestResults | null>(null);
   const [loading, setLoading] = useState(true);
   const [testWebhookStatus, setTestWebhookStatus] = useState<string>('');
+  const [runningDiagnosticTest, setRunningDiagnosticTest] = useState(false);
 
   useEffect(() => {
     fetchDiagnostics();
@@ -44,6 +74,72 @@ export default function WebhookDebugPage() {
       console.error('Error sending test webhook:', error);
       setTestWebhookStatus('error');
       setTimeout(() => setTestWebhookStatus(''), 3000);
+    }
+  };
+
+  const runDiagnosticTest = async () => {
+    setRunningDiagnosticTest(true);
+    setDiagnosticTestResults(null);
+
+    try {
+      const response = await fetch('/api/quick-webhook-test', { method: 'POST' });
+      const data = await response.json();
+      setDiagnosticTestResults(data);
+    } catch (error) {
+      setDiagnosticTestResults({
+        success: false,
+        message: 'Error running diagnostic test',
+      });
+    }
+
+    setRunningDiagnosticTest(false);
+  };
+
+  const runMigration = async () => {
+    if (!confirm('This will update your database schema. Continue?')) {
+      return;
+    }
+
+    try {
+      const response = await fetch('/api/migrate-database', { method: 'POST' });
+      const data = await response.json();
+
+      if (data.success) {
+        alert(`✅ Migration completed successfully!\n\n${data.summary.successful} migrations applied.`);
+        fetchDiagnostics();
+      } else {
+        alert(`⚠️ Migration completed with errors.\n\nCheck console for details.`);
+        console.error('Migration results:', data);
+      }
+    } catch (error) {
+      alert('Error running migration: ' + (error instanceof Error ? error.message : 'Unknown'));
+    }
+  };
+
+  const checkEvents = async () => {
+    try {
+      const response = await fetch('/api/events?limit=10');
+      const data = await response.json();
+
+      alert(`Found ${data.count} events in database.\n\nCheck console for details.`);
+      console.log('Recent Events:', data);
+    } catch (error) {
+      alert('Error fetching events: ' + (error instanceof Error ? error.message : 'Unknown'));
+    }
+  };
+
+  const getTestStatusColor = (status: string) => {
+    switch (status) {
+      case 'PASSED':
+        return 'text-green-600 bg-green-50 border-green-200';
+      case 'FAILED':
+        return 'text-red-600 bg-red-50 border-red-200';
+      case 'WARNING':
+        return 'text-yellow-600 bg-yellow-50 border-yellow-200';
+      case 'ERROR':
+        return 'text-red-600 bg-red-50 border-red-200';
+      default:
+        return 'text-gray-600 bg-gray-50 border-gray-200';
     }
   };
 
@@ -126,6 +222,79 @@ export default function WebhookDebugPage() {
 
         {/* Content */}
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          {/* Action Buttons */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+            <button
+              onClick={runDiagnosticTest}
+              disabled={runningDiagnosticTest}
+              className="px-6 py-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium text-lg"
+            >
+              {runningDiagnosticTest ? 'Running Tests...' : '🧪 Run Full Diagnostic Test'}
+            </button>
+
+            <button
+              onClick={runMigration}
+              className="px-6 py-4 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors font-medium text-lg"
+            >
+              🔧 Fix Database Schema
+            </button>
+
+            <button
+              onClick={checkEvents}
+              className="px-6 py-4 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium text-lg"
+            >
+              📊 Check Recent Events
+            </button>
+          </div>
+
+          {/* Diagnostic Test Results */}
+          {diagnosticTestResults && (
+            <div className="mb-6 space-y-6">
+              <div className={`p-6 rounded-lg border-2 ${
+                diagnosticTestResults.success
+                  ? 'bg-green-50 border-green-300'
+                  : 'bg-red-50 border-red-300'
+              }`}>
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="text-4xl">
+                    {diagnosticTestResults.success ? '✅' : '❌'}
+                  </div>
+                  <div>
+                    <h2 className="text-2xl font-bold text-gray-900">
+                      {diagnosticTestResults.success ? 'All Tests Passed' : 'Tests Failed'}
+                    </h2>
+                    <p className="text-gray-600">{diagnosticTestResults.message}</p>
+                  </div>
+                </div>
+              </div>
+
+              {diagnosticTestResults.tests && diagnosticTestResults.tests.length > 0 && (
+                <div className="bg-white rounded-lg shadow p-6">
+                  <h3 className="text-lg font-bold text-gray-900 mb-4">Test Results</h3>
+                  <div className="space-y-3">
+                    {diagnosticTestResults.tests.map((test, index) => (
+                      <div
+                        key={index}
+                        className={`p-4 rounded-lg border-2 ${getTestStatusColor(test.status)}`}
+                      >
+                        <div className="flex items-start justify-between mb-2">
+                          <h4 className="font-bold">{test.name}</h4>
+                          <span className="px-3 py-1 rounded-full text-xs font-bold bg-white">
+                            {test.status}
+                          </span>
+                        </div>
+                        <p className="text-sm">{test.details}</p>
+                        {test.eventCount !== undefined && (
+                          <p className="text-sm mt-2 font-mono">Events in database: {test.eventCount}</p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Overall Health */}
           <div className={`mb-6 p-6 rounded-lg border-2 ${
             diagnostics?.overallHealth === 'healthy'
