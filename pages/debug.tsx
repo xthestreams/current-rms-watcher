@@ -15,6 +15,16 @@ export default function DebugPage() {
     setSyncResult(null);
   };
 
+  const copyLogsToClipboard = () => {
+    const logsText = logs.join('\n');
+    navigator.clipboard.writeText(logsText).then(() => {
+      alert('Logs copied to clipboard!');
+    }).catch((err) => {
+      console.error('Failed to copy logs:', err);
+      alert('Failed to copy logs to clipboard');
+    });
+  };
+
   const testSync = async () => {
     setSyncing(true);
     setLogs([]);
@@ -147,6 +157,14 @@ export default function DebugPage() {
                 className="px-6 py-3 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
               >
                 🗑️ Clear Logs
+              </button>
+
+              <button
+                onClick={copyLogsToClipboard}
+                disabled={syncing || logs.length === 0}
+                className="px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+              >
+                📋 Copy Logs
               </button>
             </div>
           </div>
