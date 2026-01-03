@@ -31,7 +31,7 @@ export interface TopOpportunity {
   opportunityName: string;
   customerName: string;
   eventCount: number;
-  lastActivity: Date;
+  lastActivity: string;
 }
 
 export interface RecentActivity {
