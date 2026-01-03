@@ -45,7 +45,7 @@ export default function RiskManagementPage() {
     // Filter by risk level
     if (filterLevel !== 'ALL') {
       filtered = filtered.filter(opp => {
-        const riskScore = parseFloat(opp.data?.custom_fields?.risk_score) || 0;
+        const riskScore = opp.data?.custom_fields?.risk_score ?? 0;
         const level = getRiskLevel(riskScore);
 
         if (filterLevel === 'UNSCORED') {
