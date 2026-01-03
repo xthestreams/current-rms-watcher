@@ -34,7 +34,7 @@ export interface TopOpportunity {
 
 export interface RecentActivity {
   id: string;
-  timestamp: Date;
+  timestamp: string;
   opportunityId: number;
   opportunityName: string;
   customerName: string;
