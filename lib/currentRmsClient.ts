@@ -120,19 +120,28 @@ export class CurrentRMSClient {
     while (hasMore) {
       const response = await this.getOpportunities(startDate, endDate, page, 100);
 
+      console.log(`[CurrentRMS] Page ${page} - Received ${response.opportunities?.length || 0} opportunities`);
+      console.log(`[CurrentRMS] Meta:`, JSON.stringify(response.meta));
+
       if (response.opportunities && response.opportunities.length > 0) {
         allOpportunities.push(...response.opportunities);
 
         // Check if there are more pages
         const totalPages = response.meta?.total_pages || 1;
+        const currentPage = response.meta?.current_page || page;
+        console.log(`[CurrentRMS] Pagination: page ${currentPage} of ${totalPages}`);
+
         hasMore = page < totalPages;
         page++;
+
+        console.log(`[CurrentRMS] Has more pages: ${hasMore}`);
 
         // Add a small delay to avoid rate limiting
         if (hasMore) {
           await new Promise(resolve => setTimeout(resolve, 200));
         }
       } else {
+        console.log(`[CurrentRMS] No opportunities in response, stopping pagination`);
         hasMore = false;
       }
     }
