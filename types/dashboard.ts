@@ -1,5 +1,7 @@
 // Dashboard Type Definitions
 
+import { RiskLevel } from '@/lib/riskAssessment';
+
 export interface DashboardOverview {
   totalEvents: number;
   totalOpportunities: number;
@@ -62,7 +64,7 @@ export interface DashboardData {
 }
 
 export interface RiskSummaryItem {
-  level: string | null;
+  level: RiskLevel;
   count: number;
   totalValue: number;
 }
