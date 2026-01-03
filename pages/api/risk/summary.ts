@@ -13,7 +13,15 @@ export default async function handler(
   }
 
   try {
-    const summary = await eventStore.getRiskSummary();
+    // Extract date range parameters from query string
+    const startDate = typeof req.query.startDate === 'string' ? req.query.startDate : undefined;
+    const endDate = typeof req.query.endDate === 'string' ? req.query.endDate : undefined;
+
+    console.log('[RiskAPI] Date filter:', { startDate, endDate });
+
+    const summary = await eventStore.getRiskSummary(startDate, endDate);
+
+    console.log('[RiskAPI] Risk summary result:', summary);
 
     return res.status(200).json({
       success: true,

@@ -13,7 +13,11 @@ export default async function handler(
   }
 
   try {
-    const dashboardData = await eventStore.getDashboardMetrics();
+    // Extract date range parameters from query string
+    const startDate = typeof req.query.startDate === 'string' ? req.query.startDate : undefined;
+    const endDate = typeof req.query.endDate === 'string' ? req.query.endDate : undefined;
+
+    const dashboardData = await eventStore.getDashboardMetrics(startDate, endDate);
 
     return res.status(200).json({
       success: true,

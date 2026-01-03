@@ -397,7 +397,7 @@ class EventStorePostgres {
     }
   }
 
-  async getRiskSummary(): Promise<Array<{ level: string | null; count: number; totalValue: number }>> {
+  async getRiskSummary(startDate?: string, endDate?: string): Promise<Array<{ level: string | null; count: number; totalValue: number }>> {
     await this.initialize();
 
     if (!process.env.POSTGRES_URL) {
@@ -407,41 +407,159 @@ class EventStorePostgres {
     try {
       // Calculate risk level from risk_score using the same logic as the risk assessment app
       // Risk levels: LOW (≤2.0), MEDIUM (≤3.0), HIGH (≤4.0), CRITICAL (>4.0)
-      const result = await sql`
-        SELECT
-          CASE
-            WHEN COALESCE(CAST(data->'custom_fields'->>'risk_score' AS DECIMAL), 0) = 0 THEN NULL
-            WHEN CAST(data->'custom_fields'->>'risk_score' AS DECIMAL) <= 2.0 THEN 'LOW'
-            WHEN CAST(data->'custom_fields'->>'risk_score' AS DECIMAL) <= 3.0 THEN 'MEDIUM'
-            WHEN CAST(data->'custom_fields'->>'risk_score' AS DECIMAL) <= 4.0 THEN 'HIGH'
-            ELSE 'CRITICAL'
-          END as level,
-          COUNT(*)::int as count,
-          COALESCE(SUM(CAST(charge_total AS DECIMAL)), 0) as total_value
-        FROM opportunities
-        GROUP BY
-          CASE
-            WHEN COALESCE(CAST(data->'custom_fields'->>'risk_score' AS DECIMAL), 0) = 0 THEN NULL
-            WHEN CAST(data->'custom_fields'->>'risk_score' AS DECIMAL) <= 2.0 THEN 'LOW'
-            WHEN CAST(data->'custom_fields'->>'risk_score' AS DECIMAL) <= 3.0 THEN 'MEDIUM'
-            WHEN CAST(data->'custom_fields'->>'risk_score' AS DECIMAL) <= 4.0 THEN 'HIGH'
-            ELSE 'CRITICAL'
-          END
-        ORDER BY
-          CASE
-            WHEN COALESCE(CAST(data->'custom_fields'->>'risk_score' AS DECIMAL), 0) = 0 THEN 5
-            WHEN CAST(data->'custom_fields'->>'risk_score' AS DECIMAL) <= 2.0 THEN 4
-            WHEN CAST(data->'custom_fields'->>'risk_score' AS DECIMAL) <= 3.0 THEN 3
-            WHEN CAST(data->'custom_fields'->>'risk_score' AS DECIMAL) <= 4.0 THEN 2
-            ELSE 1
-          END
-      `;
 
-      return result.rows.map(row => ({
+      console.log('[EventStore] getRiskSummary called with:', { startDate, endDate });
+
+      // First, check how many opportunities exist in total
+      const totalCount = await sql`SELECT COUNT(*) as count FROM opportunities`;
+      console.log('[EventStore] Total opportunities in database:', totalCount.rows[0].count);
+
+      // Check how many have risk scores
+      const scoredCount = await sql`
+        SELECT COUNT(*) as count
+        FROM opportunities
+        WHERE COALESCE(CAST(data->'custom_fields'->>'risk_score' AS DECIMAL), 0) > 0
+      `;
+      console.log('[EventStore] Opportunities with risk scores:', scoredCount.rows[0].count);
+
+      let result;
+
+      // Build query based on date filtering parameters
+      if (startDate && endDate) {
+        result = await sql`
+          SELECT
+            CASE
+              WHEN COALESCE(CAST(data->'custom_fields'->>'risk_score' AS DECIMAL), 0) = 0 THEN NULL
+              WHEN CAST(data->'custom_fields'->>'risk_score' AS DECIMAL) <= 2.0 THEN 'LOW'
+              WHEN CAST(data->'custom_fields'->>'risk_score' AS DECIMAL) <= 3.0 THEN 'MEDIUM'
+              WHEN CAST(data->'custom_fields'->>'risk_score' AS DECIMAL) <= 4.0 THEN 'HIGH'
+              ELSE 'CRITICAL'
+            END as level,
+            COUNT(*)::int as count,
+            COALESCE(SUM(CAST(charge_total AS DECIMAL)), 0) as total_value
+          FROM opportunities
+          WHERE starts_at >= ${startDate}::date AND starts_at <= ${endDate}::date
+          GROUP BY
+            CASE
+              WHEN COALESCE(CAST(data->'custom_fields'->>'risk_score' AS DECIMAL), 0) = 0 THEN NULL
+              WHEN CAST(data->'custom_fields'->>'risk_score' AS DECIMAL) <= 2.0 THEN 'LOW'
+              WHEN CAST(data->'custom_fields'->>'risk_score' AS DECIMAL) <= 3.0 THEN 'MEDIUM'
+              WHEN CAST(data->'custom_fields'->>'risk_score' AS DECIMAL) <= 4.0 THEN 'HIGH'
+              ELSE 'CRITICAL'
+            END
+          ORDER BY
+            CASE
+              WHEN COALESCE(CAST(data->'custom_fields'->>'risk_score' AS DECIMAL), 0) = 0 THEN 5
+              WHEN CAST(data->'custom_fields'->>'risk_score' AS DECIMAL) <= 2.0 THEN 4
+              WHEN CAST(data->'custom_fields'->>'risk_score' AS DECIMAL) <= 3.0 THEN 3
+              WHEN CAST(data->'custom_fields'->>'risk_score' AS DECIMAL) <= 4.0 THEN 2
+              ELSE 1
+            END
+        `;
+      } else if (startDate) {
+        result = await sql`
+          SELECT
+            CASE
+              WHEN COALESCE(CAST(data->'custom_fields'->>'risk_score' AS DECIMAL), 0) = 0 THEN NULL
+              WHEN CAST(data->'custom_fields'->>'risk_score' AS DECIMAL) <= 2.0 THEN 'LOW'
+              WHEN CAST(data->'custom_fields'->>'risk_score' AS DECIMAL) <= 3.0 THEN 'MEDIUM'
+              WHEN CAST(data->'custom_fields'->>'risk_score' AS DECIMAL) <= 4.0 THEN 'HIGH'
+              ELSE 'CRITICAL'
+            END as level,
+            COUNT(*)::int as count,
+            COALESCE(SUM(CAST(charge_total AS DECIMAL)), 0) as total_value
+          FROM opportunities
+          WHERE starts_at >= ${startDate}::date
+          GROUP BY
+            CASE
+              WHEN COALESCE(CAST(data->'custom_fields'->>'risk_score' AS DECIMAL), 0) = 0 THEN NULL
+              WHEN CAST(data->'custom_fields'->>'risk_score' AS DECIMAL) <= 2.0 THEN 'LOW'
+              WHEN CAST(data->'custom_fields'->>'risk_score' AS DECIMAL) <= 3.0 THEN 'MEDIUM'
+              WHEN CAST(data->'custom_fields'->>'risk_score' AS DECIMAL) <= 4.0 THEN 'HIGH'
+              ELSE 'CRITICAL'
+            END
+          ORDER BY
+            CASE
+              WHEN COALESCE(CAST(data->'custom_fields'->>'risk_score' AS DECIMAL), 0) = 0 THEN 5
+              WHEN CAST(data->'custom_fields'->>'risk_score' AS DECIMAL) <= 2.0 THEN 4
+              WHEN CAST(data->'custom_fields'->>'risk_score' AS DECIMAL) <= 3.0 THEN 3
+              WHEN CAST(data->'custom_fields'->>'risk_score' AS DECIMAL) <= 4.0 THEN 2
+              ELSE 1
+            END
+        `;
+      } else if (endDate) {
+        result = await sql`
+          SELECT
+            CASE
+              WHEN COALESCE(CAST(data->'custom_fields'->>'risk_score' AS DECIMAL), 0) = 0 THEN NULL
+              WHEN CAST(data->'custom_fields'->>'risk_score' AS DECIMAL) <= 2.0 THEN 'LOW'
+              WHEN CAST(data->'custom_fields'->>'risk_score' AS DECIMAL) <= 3.0 THEN 'MEDIUM'
+              WHEN CAST(data->'custom_fields'->>'risk_score' AS DECIMAL) <= 4.0 THEN 'HIGH'
+              ELSE 'CRITICAL'
+            END as level,
+            COUNT(*)::int as count,
+            COALESCE(SUM(CAST(charge_total AS DECIMAL)), 0) as total_value
+          FROM opportunities
+          WHERE starts_at <= ${endDate}::date
+          GROUP BY
+            CASE
+              WHEN COALESCE(CAST(data->'custom_fields'->>'risk_score' AS DECIMAL), 0) = 0 THEN NULL
+              WHEN CAST(data->'custom_fields'->>'risk_score' AS DECIMAL) <= 2.0 THEN 'LOW'
+              WHEN CAST(data->'custom_fields'->>'risk_score' AS DECIMAL) <= 3.0 THEN 'MEDIUM'
+              WHEN CAST(data->'custom_fields'->>'risk_score' AS DECIMAL) <= 4.0 THEN 'HIGH'
+              ELSE 'CRITICAL'
+            END
+          ORDER BY
+            CASE
+              WHEN COALESCE(CAST(data->'custom_fields'->>'risk_score' AS DECIMAL), 0) = 0 THEN 5
+              WHEN CAST(data->'custom_fields'->>'risk_score' AS DECIMAL) <= 2.0 THEN 4
+              WHEN CAST(data->'custom_fields'->>'risk_score' AS DECIMAL) <= 3.0 THEN 3
+              WHEN CAST(data->'custom_fields'->>'risk_score' AS DECIMAL) <= 4.0 THEN 2
+              ELSE 1
+            END
+        `;
+      } else {
+        // No date filtering
+        result = await sql`
+          SELECT
+            CASE
+              WHEN COALESCE(CAST(data->'custom_fields'->>'risk_score' AS DECIMAL), 0) = 0 THEN NULL
+              WHEN CAST(data->'custom_fields'->>'risk_score' AS DECIMAL) <= 2.0 THEN 'LOW'
+              WHEN CAST(data->'custom_fields'->>'risk_score' AS DECIMAL) <= 3.0 THEN 'MEDIUM'
+              WHEN CAST(data->'custom_fields'->>'risk_score' AS DECIMAL) <= 4.0 THEN 'HIGH'
+              ELSE 'CRITICAL'
+            END as level,
+            COUNT(*)::int as count,
+            COALESCE(SUM(CAST(charge_total AS DECIMAL)), 0) as total_value
+          FROM opportunities
+          GROUP BY
+            CASE
+              WHEN COALESCE(CAST(data->'custom_fields'->>'risk_score' AS DECIMAL), 0) = 0 THEN NULL
+              WHEN CAST(data->'custom_fields'->>'risk_score' AS DECIMAL) <= 2.0 THEN 'LOW'
+              WHEN CAST(data->'custom_fields'->>'risk_score' AS DECIMAL) <= 3.0 THEN 'MEDIUM'
+              WHEN CAST(data->'custom_fields'->>'risk_score' AS DECIMAL) <= 4.0 THEN 'HIGH'
+              ELSE 'CRITICAL'
+            END
+          ORDER BY
+            CASE
+              WHEN COALESCE(CAST(data->'custom_fields'->>'risk_score' AS DECIMAL), 0) = 0 THEN 5
+              WHEN CAST(data->'custom_fields'->>'risk_score' AS DECIMAL) <= 2.0 THEN 4
+              WHEN CAST(data->'custom_fields'->>'risk_score' AS DECIMAL) <= 3.0 THEN 3
+              WHEN CAST(data->'custom_fields'->>'risk_score' AS DECIMAL) <= 4.0 THEN 2
+              ELSE 1
+            END
+        `;
+      }
+
+      const mapped = result.rows.map(row => ({
         level: row.level,
         count: row.count,
         totalValue: parseFloat(row.total_value) || 0
       }));
+
+      console.log('[EventStore] getRiskSummary returning:', mapped);
+
+      return mapped;
     } catch (error) {
       console.error('[EventStore] Error fetching risk summary:', error);
       return [];
@@ -913,7 +1031,7 @@ class EventStorePostgres {
   }
 
   // Dashboard Metrics - Comprehensive dashboard data
-  async getDashboardMetrics(): Promise<any> {
+  async getDashboardMetrics(startDate?: string, endDate?: string): Promise<any> {
     await this.initialize();
 
     if (!process.env.POSTGRES_URL) {
@@ -952,10 +1070,32 @@ class EventStorePostgres {
       ]);
 
       // Calculate total opportunities from opportunities table (includes synced data)
-      const oppResult = await sql`
-        SELECT COUNT(*) as count
-        FROM opportunities
-      `;
+      // Apply date filtering if provided
+      let oppResult;
+      if (startDate && endDate) {
+        oppResult = await sql`
+          SELECT COUNT(*) as count
+          FROM opportunities
+          WHERE starts_at >= ${startDate}::date AND starts_at <= ${endDate}::date
+        `;
+      } else if (startDate) {
+        oppResult = await sql`
+          SELECT COUNT(*) as count
+          FROM opportunities
+          WHERE starts_at >= ${startDate}::date
+        `;
+      } else if (endDate) {
+        oppResult = await sql`
+          SELECT COUNT(*) as count
+          FROM opportunities
+          WHERE starts_at <= ${endDate}::date
+        `;
+      } else {
+        oppResult = await sql`
+          SELECT COUNT(*) as count
+          FROM opportunities
+        `;
+      }
       const totalOpportunities = parseInt(oppResult.rows[0].count);
 
       const successRate = metrics.totalEvents > 0
