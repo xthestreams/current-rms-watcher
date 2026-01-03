@@ -2,9 +2,9 @@
 // Retrieve recent events for the dashboard
 
 import { NextApiRequest, NextApiResponse } from 'next';
-import { eventStore } from '@/lib/eventStore';
+import { eventStore } from '@/lib/eventStorePostgres';
 
-export default function handler(
+export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
@@ -14,7 +14,7 @@ export default function handler(
 
   try {
     const limit = req.query.limit ? parseInt(req.query.limit as string) : 50;
-    const events = eventStore.getRecentEvents(limit);
+    const events = await eventStore.getRecentEvents(limit);
 
     return res.status(200).json({
       success: true,

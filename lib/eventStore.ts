@@ -27,14 +27,16 @@ class EventStore {
   }
 
   private loadFromFile(): void {
-    if (this.loaded) return;
-
+    // Always reload from file to get latest data across instances
     try {
       // Load events
       if (fs.existsSync(STORAGE_FILE)) {
         const data = fs.readFileSync(STORAGE_FILE, 'utf8');
         const parsed: StorageData = JSON.parse(data);
         this.events = parsed.events || [];
+        console.log(`[EventStore] Loaded ${this.events.length} events from file`);
+      } else {
+        console.log('[EventStore] No storage file found, starting fresh');
       }
 
       // Load metadata

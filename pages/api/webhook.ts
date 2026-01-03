@@ -3,7 +3,7 @@
 
 import { NextApiRequest, NextApiResponse } from 'next';
 import { WebhookPayload, ProcessedEvent } from '@/types';
-import { eventStore } from '@/lib/eventStore';
+import { eventStore } from '@/lib/eventStorePostgres';
 import { rulesEngine } from '@/lib/businessRules';
 
 export default async function handler(
@@ -51,9 +51,6 @@ export default async function handler(
       timestamp: processedEvent.timestamp
     });
 
-    // Store the event
-    eventStore.addEvent(processedEvent);
-
     // Execute business rules
     try {
       await rulesEngine.executeRules(processedEvent);
@@ -63,6 +60,9 @@ export default async function handler(
       processedEvent.error = error instanceof Error ? error.message : 'Unknown error';
       console.error('❌ Error processing event:', error);
     }
+
+    // Store the event (after processing so we have the final state)
+    await eventStore.addEvent(processedEvent);
 
     // Return 200 OK quickly (webhook best practice)
     return res.status(200).json({

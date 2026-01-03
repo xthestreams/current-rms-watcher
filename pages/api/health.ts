@@ -2,9 +2,9 @@
 // Health check and metrics endpoint
 
 import { NextApiRequest, NextApiResponse } from 'next';
-import { eventStore } from '@/lib/eventStore';
+import { eventStore } from '@/lib/eventStorePostgres';
 
-export default function handler(
+export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
@@ -13,7 +13,7 @@ export default function handler(
   }
 
   try {
-    const metrics = eventStore.getMetrics();
+    const metrics = await eventStore.getMetrics();
 
     return res.status(200).json({
       success: true,
