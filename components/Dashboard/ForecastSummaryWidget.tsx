@@ -38,9 +38,9 @@ export function ForecastSummaryWidget({ data, timeSeries, groupByWeek, loading }
     );
   }
 
-  // Calculate max value for chart scaling
+  // Calculate max value for chart scaling, rounded to nearest $10,000
   const chartData = timeSeries || [];
-  const maxValue = Math.max(
+  const rawMaxValue = Math.max(
     ...chartData.map(d =>
       showRevenue
         ? d.commit_revenue + d.upside_revenue + d.unreviewed_revenue
@@ -48,6 +48,9 @@ export function ForecastSummaryWidget({ data, timeSeries, groupByWeek, loading }
     ),
     1
   );
+  // Round up to nearest $10,000
+  const scaleMax = Math.ceil(rawMaxValue / 10000) * 10000;
+  const scaleMid = scaleMax / 2;
 
   return (
     <div className="bg-white rounded-lg shadow p-6 border border-gray-200 hover:shadow-lg transition-shadow">
@@ -110,54 +113,72 @@ export function ForecastSummaryWidget({ data, timeSeries, groupByWeek, loading }
           <div className="text-xs text-gray-500 mb-2">
             {showRevenue ? 'Revenue' : 'Profit'} by {groupByWeek ? 'Week' : 'Month'}
           </div>
-          <div className="flex items-end gap-1 h-32">
-            {chartData.slice(0, 12).map((period, index) => {
-              const commitVal = showRevenue ? period.commit_revenue : period.commit_profit;
-              const upsideVal = showRevenue ? period.upside_revenue : period.upside_profit;
-              const unreviewedVal = showRevenue ? period.unreviewed_revenue : period.unreviewed_profit;
-              const total = commitVal + upsideVal + unreviewedVal;
-              const totalHeight = maxValue > 0 ? (total / maxValue) * 100 : 0;
+          <div className="flex">
+            {/* Y-Axis Labels */}
+            <div className="flex flex-col justify-between h-32 pr-2 text-[9px] text-gray-400 text-right w-12 flex-shrink-0">
+              <span>{formatCurrency(scaleMax)}</span>
+              <span>{formatCurrency(scaleMid)}</span>
+              <span>$0</span>
+            </div>
+            {/* Chart Area */}
+            <div className="flex-1 relative">
+              {/* Grid Lines */}
+              <div className="absolute inset-0 flex flex-col justify-between pointer-events-none">
+                <div className="border-t border-gray-200"></div>
+                <div className="border-t border-gray-100 border-dashed"></div>
+                <div className="border-t border-gray-200"></div>
+              </div>
+              {/* Bars */}
+              <div className="flex items-end gap-1 h-32 relative">
+                {chartData.slice(0, 12).map((period) => {
+                  const commitVal = showRevenue ? period.commit_revenue : period.commit_profit;
+                  const upsideVal = showRevenue ? period.upside_revenue : period.upside_profit;
+                  const unreviewedVal = showRevenue ? period.unreviewed_revenue : period.unreviewed_profit;
+                  const total = commitVal + upsideVal + unreviewedVal;
+                  const totalHeight = scaleMax > 0 ? (total / scaleMax) * 100 : 0;
 
-              const commitHeight = total > 0 ? (commitVal / total) * totalHeight : 0;
-              const upsideHeight = total > 0 ? (upsideVal / total) * totalHeight : 0;
-              const unreviewedHeight = total > 0 ? (unreviewedVal / total) * totalHeight : 0;
+                  const commitHeight = total > 0 ? (commitVal / total) * totalHeight : 0;
+                  const upsideHeight = total > 0 ? (upsideVal / total) * totalHeight : 0;
+                  const unreviewedHeight = total > 0 ? (unreviewedVal / total) * totalHeight : 0;
 
-              return (
-                <div
-                  key={period.period}
-                  className="flex-1 flex flex-col justify-end group relative"
-                  title={`${period.periodLabel}: ${formatCurrency(total)}`}
-                >
-                  <div className="flex flex-col justify-end" style={{ height: `${totalHeight}%` }}>
-                    {unreviewedHeight > 0 && (
-                      <div
-                        className="bg-gray-300 rounded-t-sm"
-                        style={{ height: `${(unreviewedHeight / totalHeight) * 100}%`, minHeight: '2px' }}
-                      />
-                    )}
-                    {upsideHeight > 0 && (
-                      <div
-                        className="bg-blue-400"
-                        style={{ height: `${(upsideHeight / totalHeight) * 100}%`, minHeight: '2px' }}
-                      />
-                    )}
-                    {commitHeight > 0 && (
-                      <div
-                        className="bg-green-500 rounded-b-sm"
-                        style={{ height: `${(commitHeight / totalHeight) * 100}%`, minHeight: '2px' }}
-                      />
-                    )}
-                  </div>
-                  <div className="text-[9px] text-gray-400 text-center mt-1 truncate">
-                    {period.periodLabel}
-                  </div>
-                  {/* Tooltip */}
-                  <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-10">
-                    {period.periodLabel}: {formatCurrency(total)}
-                  </div>
-                </div>
-              );
-            })}
+                  return (
+                    <div
+                      key={period.period}
+                      className="flex-1 flex flex-col justify-end group relative"
+                      title={`${period.periodLabel}: ${formatCurrency(total)}`}
+                    >
+                      <div className="flex flex-col justify-end" style={{ height: `${totalHeight}%` }}>
+                        {unreviewedHeight > 0 && (
+                          <div
+                            className="bg-gray-300 rounded-t-sm"
+                            style={{ height: `${(unreviewedHeight / totalHeight) * 100}%`, minHeight: '2px' }}
+                          />
+                        )}
+                        {upsideHeight > 0 && (
+                          <div
+                            className="bg-blue-400"
+                            style={{ height: `${(upsideHeight / totalHeight) * 100}%`, minHeight: '2px' }}
+                          />
+                        )}
+                        {commitHeight > 0 && (
+                          <div
+                            className="bg-green-500 rounded-b-sm"
+                            style={{ height: `${(commitHeight / totalHeight) * 100}%`, minHeight: '2px' }}
+                          />
+                        )}
+                      </div>
+                      <div className="text-[9px] text-gray-400 text-center mt-1 truncate">
+                        {period.periodLabel}
+                      </div>
+                      {/* Tooltip */}
+                      <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-10">
+                        {period.periodLabel}: {formatCurrency(total)}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
           </div>
         </div>
       ) : (
