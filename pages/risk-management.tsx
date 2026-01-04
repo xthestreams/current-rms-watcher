@@ -395,6 +395,12 @@ export default function RiskManagementPage() {
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Score
                     </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-yellow-50">
+                      Updated At (RMS)
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-yellow-50">
+                      Risk Last Updated
+                    </th>
                     <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Action
                     </th>
@@ -403,7 +409,7 @@ export default function RiskManagementPage() {
                 <tbody className="bg-white divide-y divide-gray-200">
                   {filteredOpportunities.length === 0 ? (
                     <tr>
-                      <td colSpan={8} className="px-6 py-8 text-center text-gray-500">
+                      <td colSpan={10} className="px-6 py-8 text-center text-gray-500">
                         No opportunities found
                       </td>
                     </tr>
@@ -466,6 +472,14 @@ export default function RiskManagementPage() {
                           </td>
                           <td className="px-6 py-4 text-sm text-gray-600">
                             {riskScore > 0 ? riskScore.toFixed(2) : '-'}
+                          </td>
+                          <td className="px-6 py-4 text-xs text-gray-500 bg-yellow-50 font-mono">
+                            {opp.updated_at ? new Date(opp.updated_at).toLocaleString() : 'N/A'}
+                          </td>
+                          <td className="px-6 py-4 text-xs text-gray-500 bg-yellow-50 font-mono">
+                            {opp.data?.custom_fields?.risk_last_updated
+                              ? new Date(opp.data.custom_fields.risk_last_updated.toString()).toLocaleString()
+                              : 'N/A'}
                           </td>
                           <td className="px-6 py-4 text-right text-sm">
                             <button
