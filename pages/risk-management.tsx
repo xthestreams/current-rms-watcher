@@ -15,6 +15,7 @@ export default function RiskManagementPage() {
   const [showAssessmentModal, setShowAssessmentModal] = useState(false);
   const [filterLevel, setFilterLevel] = useState<string>('ALL');
   const [searchTerm, setSearchTerm] = useState('');
+  const [showNeedsReviewOnly, setShowNeedsReviewOnly] = useState(false);
   const [dateRange, setDateRange] = useState<DateRange>({
     preset: 'all',
     startDate: null,
@@ -30,13 +31,17 @@ export default function RiskManagementPage() {
   // Read filter from URL query parameter
   useEffect(() => {
     if (router.isReady) {
-      const { filter } = router.query;
+      const { filter, needsReview } = router.query;
       if (filter && typeof filter === 'string') {
-        // Valid filter values: ALL, CRITICAL, HIGH, MEDIUM, LOW, UNSCORED, NEEDS_REVIEW
-        const validFilters = ['ALL', 'CRITICAL', 'HIGH', 'MEDIUM', 'LOW', 'UNSCORED', 'NEEDS_REVIEW'];
+        // Valid filter values: ALL, CRITICAL, HIGH, MEDIUM, LOW, UNSCORED
+        const validFilters = ['ALL', 'CRITICAL', 'HIGH', 'MEDIUM', 'LOW', 'UNSCORED'];
         if (validFilters.includes(filter.toUpperCase())) {
           setFilterLevel(filter.toUpperCase());
         }
+      }
+      // Handle needs review toggle from URL
+      if (needsReview === 'true' || needsReview === '1') {
+        setShowNeedsReviewOnly(true);
       }
     }
   }, [router.isReady, router.query]);
@@ -96,7 +101,7 @@ export default function RiskManagementPage() {
 
   useEffect(() => {
     filterOpportunities();
-  }, [opportunities, filterLevel, searchTerm, dateRange]);
+  }, [opportunities, filterLevel, searchTerm, dateRange, showNeedsReviewOnly]);
 
   const fetchOpportunities = async () => {
     setLoading(true);
@@ -133,14 +138,14 @@ export default function RiskManagementPage() {
       });
     }
 
-    // Filter by risk level or special filters
+    // Filter by "needs review" toggle (opportunities updated since last risk assessment)
+    if (showNeedsReviewOnly) {
+      filtered = filtered.filter(opp => needsRiskReview(opp));
+    }
+
+    // Filter by risk level
     if (filterLevel !== 'ALL') {
       filtered = filtered.filter(opp => {
-        // Special filter: opportunities updated since last risk review
-        if (filterLevel === 'NEEDS_REVIEW') {
-          return needsRiskReview(opp);
-        }
-
         const riskScore = parseRiskScore(opp.data?.custom_fields?.risk_score);
         const level = getRiskLevel(riskScore);
 
@@ -275,7 +280,7 @@ export default function RiskManagementPage() {
         {/* Content */}
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           {/* Stats Overview */}
-          <div className="grid grid-cols-2 md:grid-cols-7 gap-4 mb-6">
+          <div className="grid grid-cols-2 md:grid-cols-6 gap-4 mb-6">
             <div className="bg-white rounded-lg shadow p-4 border-l-4 border-gray-400">
               <div className="text-2xl font-bold text-gray-900">{stats.total}</div>
               <div className="text-sm text-gray-500">Total</div>
@@ -300,18 +305,32 @@ export default function RiskManagementPage() {
               <div className="text-2xl font-bold text-gray-600">{stats.unscored}</div>
               <div className="text-sm text-gray-500">Unscored</div>
             </div>
-            <button
-              onClick={() => setFilterLevel('NEEDS_REVIEW')}
-              className={`bg-white rounded-lg shadow p-4 border-l-4 border-purple-500 text-left hover:bg-purple-50 transition-colors ${filterLevel === 'NEEDS_REVIEW' ? 'ring-2 ring-purple-500' : ''}`}
-            >
-              <div className="text-2xl font-bold text-purple-600">{stats.needsReview}</div>
-              <div className="text-sm text-gray-500">Needs Review</div>
-            </button>
           </div>
 
-          {/* Date Range Filter */}
-          <div className="mb-6">
-            <DateRangeFilter value={dateRange} onChange={setDateRange} />
+          {/* Date Range Filter & Needs Review Toggle */}
+          <div className="bg-white rounded-lg shadow p-4 mb-6">
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+              <div className="flex-1">
+                <DateRangeFilter value={dateRange} onChange={setDateRange} />
+              </div>
+              <div className="flex items-center gap-3 px-4 py-2 bg-purple-50 rounded-lg border border-purple-200">
+                <label htmlFor="needsReviewToggle" className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    id="needsReviewToggle"
+                    checked={showNeedsReviewOnly}
+                    onChange={(e) => setShowNeedsReviewOnly(e.target.checked)}
+                    className="h-4 w-4 text-purple-600 border-gray-300 rounded focus:ring-purple-500"
+                  />
+                  <span className="text-sm font-medium text-purple-700">
+                    Updated Since Review
+                  </span>
+                  <span className="text-xs bg-purple-200 text-purple-800 px-2 py-0.5 rounded-full font-semibold">
+                    {stats.needsReview}
+                  </span>
+                </label>
+              </div>
+            </div>
           </div>
 
           {/* Filters */}
@@ -332,7 +351,6 @@ export default function RiskManagementPage() {
                   <option value="MEDIUM">Medium</option>
                   <option value="LOW">Low</option>
                   <option value="UNSCORED">Unscored</option>
-                  <option value="NEEDS_REVIEW">Updated Since Review</option>
                 </select>
               </div>
               <div>
