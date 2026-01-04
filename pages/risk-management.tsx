@@ -58,6 +58,16 @@ export default function RiskManagementPage() {
     return `https://${currentRmsSubdomain}.current-rms.com/opportunities/${opportunityId}`;
   };
 
+  // Helper to parse risk_score which may be number or string
+  const parseRiskScore = (rawScore: unknown): number => {
+    if (typeof rawScore === 'number') {
+      return rawScore;
+    } else if (typeof rawScore === 'string' && rawScore !== '') {
+      return parseFloat(rawScore) || 0;
+    }
+    return 0;
+  };
+
   useEffect(() => {
     filterOpportunities();
   }, [opportunities, filterLevel, searchTerm, dateRange]);
@@ -100,8 +110,7 @@ export default function RiskManagementPage() {
     // Filter by risk level
     if (filterLevel !== 'ALL') {
       filtered = filtered.filter(opp => {
-        const rawScore = opp.data?.custom_fields?.risk_score;
-        const riskScore = typeof rawScore === 'number' ? rawScore : 0;
+        const riskScore = parseRiskScore(opp.data?.custom_fields?.risk_score);
         const level = getRiskLevel(riskScore);
 
         if (filterLevel === 'UNSCORED') {
@@ -162,8 +171,7 @@ export default function RiskManagementPage() {
     };
 
     opportunities.forEach(opp => {
-      const rawScore = opp.data?.custom_fields?.risk_score;
-      const riskScore = typeof rawScore === 'number' ? rawScore : 0;
+      const riskScore = parseRiskScore(opp.data?.custom_fields?.risk_score);
       const level = getRiskLevel(riskScore);
       const value = parseFloat(opp.charge_total?.toString() || '0');
 
@@ -338,8 +346,7 @@ export default function RiskManagementPage() {
                     </tr>
                   ) : (
                     filteredOpportunities.map((opp) => {
-                      const rawScore = opp.data?.custom_fields?.risk_score;
-                      const riskScore = typeof rawScore === 'number' ? rawScore : 0;
+                      const riskScore = parseRiskScore(opp.data?.custom_fields?.risk_score);
                       const riskLevel = getRiskLevel(riskScore);
                       const colors = getRiskLevelColor(riskLevel);
                       const opportunityUrl = getOpportunityUrl(opp.id);
