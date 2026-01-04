@@ -12,7 +12,7 @@ import { RiskStatusSummary } from '@/components/Dashboard/RiskStatusSummary';
 import { ForecastSummaryWidget } from '@/components/Dashboard/ForecastSummaryWidget';
 import { RiskLevel } from '@/lib/riskAssessment';
 import { DashboardData, RiskSummaryItem, DebugDiagnostics } from '@/types/dashboard';
-import { ForecastSummary } from '@/types/forecast';
+import { ForecastSummary, ForecastTimeSeries } from '@/types/forecast';
 import { DateRangeFilter, DateRange } from '@/components/DateRangeFilter';
 
 export default function Dashboard() {
@@ -20,6 +20,8 @@ export default function Dashboard() {
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
   const [riskSummaryData, setRiskSummaryData] = useState<RiskSummaryItem[]>([]);
   const [forecastSummary, setForecastSummary] = useState<ForecastSummary | null>(null);
+  const [forecastTimeSeries, setForecastTimeSeries] = useState<ForecastTimeSeries[]>([]);
+  const [forecastGroupByWeek, setForecastGroupByWeek] = useState(true);
   const [forecastLoading, setForecastLoading] = useState(true);
   const [loading, setLoading] = useState(true);
   const [autoRefresh, setAutoRefresh] = useState(true);
@@ -59,6 +61,8 @@ export default function Dashboard() {
 
       if (forecastData.success) {
         setForecastSummary(forecastData.data.summary);
+        setForecastTimeSeries(forecastData.data.timeSeries || []);
+        setForecastGroupByWeek(forecastData.data.groupByWeek ?? true);
       }
       setForecastLoading(false);
 
@@ -264,6 +268,23 @@ export default function Dashboard() {
             <DateRangeFilter value={dateRange} onChange={setDateRange} />
           </div>
 
+          {/* Business Intelligence Row - Forecast & Risk Summary */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+            <ForecastSummaryWidget
+              data={forecastSummary}
+              timeSeries={forecastTimeSeries}
+              groupByWeek={forecastGroupByWeek}
+              loading={forecastLoading}
+            />
+            <RiskStatusSummary
+              data={riskSummaryData}
+              onCategoryClick={(level: RiskLevel) => {
+                const filterValue = level === null ? 'UNSCORED' : level;
+                router.push(`/risk-management?filter=${filterValue}`);
+              }}
+            />
+          </div>
+
           {/* Sync Status Indicator */}
           {dashboardData?.syncInfo && (
             <div className="mb-6 bg-blue-50 border-l-4 border-blue-500 p-4 rounded-lg">
@@ -308,18 +329,6 @@ export default function Dashboard() {
             <StatusDistributionChart data={dashboardData?.statusDistribution || []} />
             <ActivityFeed data={dashboardData?.recentActivity || []} />
             <SyncControl />
-          </div>
-
-          {/* Business Intelligence Row */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-            <ForecastSummaryWidget data={forecastSummary} loading={forecastLoading} />
-            <RiskStatusSummary
-              data={riskSummaryData}
-              onCategoryClick={(level: RiskLevel) => {
-                const filterValue = level === null ? 'UNSCORED' : level;
-                router.push(`/risk-management?filter=${filterValue}`);
-              }}
-            />
           </div>
 
           {/* Top Opportunities Table */}

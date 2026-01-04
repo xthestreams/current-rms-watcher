@@ -8,7 +8,8 @@ import {
   calculateForecastSummary,
   calculateForecastByOwner,
   calculateForecastByCustomer,
-  calculateForecastByProbabilityBand
+  calculateForecastByProbabilityBand,
+  calculateForecastTimeSeries
 } from '@/lib/forecastCalculation';
 import { ForecastMetadata } from '@/types/forecast';
 
@@ -226,6 +227,17 @@ export default async function handler(
     const byCustomer = calculateForecastByCustomer(opportunities);
     const byProbabilityBand = calculateForecastByProbabilityBand(opportunities);
 
+    // Calculate time series - determine if we should group by week or month
+    // Use week if date range is <= 89 days, otherwise use month
+    let dateRangeDays = 90; // default to monthly
+    if (startDate && endDate) {
+      const start = new Date(startDate);
+      const end = new Date(endDate);
+      dateRangeDays = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
+    }
+    const groupByWeek = dateRangeDays <= 89;
+    const timeSeries = calculateForecastTimeSeries(opportunities, groupByWeek);
+
     // Get unique owners and customers for filter dropdowns
     const owners = [...new Set(opportunities.map(o => o.owner_name).filter(Boolean))].sort();
     const customers = [...new Set(opportunities.map(o => o.organisation_name).filter(Boolean))].sort();
@@ -237,6 +249,8 @@ export default async function handler(
         byOwner,
         byCustomer,
         byProbabilityBand,
+        timeSeries,
+        groupByWeek,
         opportunities,
         filters: {
           owners,

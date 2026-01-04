@@ -130,3 +130,14 @@ export const EXCLUSION_REASONS = [
   'Out of scope',
   'Other'
 ] as const;
+
+export interface ForecastTimeSeries {
+  period: string;           // e.g., "2024-W01" for week or "2024-01" for month
+  periodLabel: string;      // e.g., "Jan 1-7" or "January"
+  commit_revenue: number;
+  upside_revenue: number;
+  unreviewed_revenue: number;
+  commit_profit: number;
+  upside_profit: number;
+  unreviewed_profit: number;
+}

@@ -1,15 +1,18 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useRouter } from 'next/router';
-import { ForecastSummary } from '@/types/forecast';
+import { ForecastSummary, ForecastTimeSeries } from '@/types/forecast';
 import { formatCurrency } from '@/lib/forecastCalculation';
 
 interface ForecastSummaryWidgetProps {
   data: ForecastSummary | null;
+  timeSeries?: ForecastTimeSeries[];
+  groupByWeek?: boolean;
   loading?: boolean;
 }
 
-export function ForecastSummaryWidget({ data, loading }: ForecastSummaryWidgetProps) {
+export function ForecastSummaryWidget({ data, timeSeries, groupByWeek, loading }: ForecastSummaryWidgetProps) {
   const router = useRouter();
+  const [showRevenue, setShowRevenue] = useState(true);
 
   if (loading) {
     return (
@@ -20,10 +23,7 @@ export function ForecastSummaryWidget({ data, loading }: ForecastSummaryWidgetPr
             <div className="h-12 bg-gray-200 rounded"></div>
             <div className="h-12 bg-gray-200 rounded"></div>
           </div>
-          <div className="space-y-2">
-            <div className="h-16 bg-gray-200 rounded"></div>
-            <div className="h-16 bg-gray-200 rounded"></div>
-          </div>
+          <div className="h-40 bg-gray-200 rounded"></div>
         </div>
       </div>
     );
@@ -38,44 +38,16 @@ export function ForecastSummaryWidget({ data, loading }: ForecastSummaryWidgetPr
     );
   }
 
-  const categories = [
-    {
-      label: 'Commit',
-      count: data.commit_count,
-      value: data.commit_revenue,
-      colors: {
-        bg: 'bg-green-50',
-        border: 'border-green-300',
-        text: 'text-green-700',
-        bar: 'bg-green-500'
-      }
-    },
-    {
-      label: 'Upside',
-      count: data.upside_count,
-      value: data.upside_revenue,
-      colors: {
-        bg: 'bg-blue-50',
-        border: 'border-blue-300',
-        text: 'text-blue-700',
-        bar: 'bg-blue-500'
-      }
-    },
-    {
-      label: 'Unreviewed',
-      count: data.unreviewed_count,
-      value: data.unreviewed_revenue,
-      colors: {
-        bg: 'bg-gray-50',
-        border: 'border-gray-300',
-        text: 'text-gray-600',
-        bar: 'bg-gray-400'
-      }
-    }
-  ];
-
-  const totalCount = data.commit_count + data.upside_count + data.unreviewed_count;
-  const maxValue = Math.max(...categories.map(c => c.value), 1);
+  // Calculate max value for chart scaling
+  const chartData = timeSeries || [];
+  const maxValue = Math.max(
+    ...chartData.map(d =>
+      showRevenue
+        ? d.commit_revenue + d.upside_revenue + d.unreviewed_revenue
+        : d.commit_profit + d.upside_profit + d.unreviewed_profit
+    ),
+    1
+  );
 
   return (
     <div className="bg-white rounded-lg shadow p-6 border border-gray-200 hover:shadow-lg transition-shadow">
@@ -93,83 +65,145 @@ export function ForecastSummaryWidget({ data, loading }: ForecastSummaryWidgetPr
       </div>
 
       {/* Summary Stats */}
-      <div className="grid grid-cols-2 gap-4 mb-6">
-        <div className="text-center">
+      <div className="grid grid-cols-2 gap-4 mb-4">
+        <div className="text-center p-3 bg-emerald-50 rounded-lg">
           <div className="text-2xl font-bold text-emerald-600">
             {formatCurrency(data.weighted_revenue)}
           </div>
-          <div className="text-sm text-gray-500">Weighted Forecast</div>
+          <div className="text-xs text-gray-500">Weighted Revenue</div>
         </div>
-        <div className="text-center">
-          <div className="text-2xl font-bold text-gray-900">
-            {formatCurrency(data.total_pipeline_revenue)}
+        <div className="text-center p-3 bg-emerald-50 rounded-lg">
+          <div className="text-2xl font-bold text-emerald-600">
+            {formatCurrency(data.weighted_profit)}
           </div>
-          <div className="text-sm text-gray-500">Total Pipeline</div>
+          <div className="text-xs text-gray-500">Weighted Profit</div>
         </div>
       </div>
 
-      {/* Category Cards */}
-      <div className="space-y-2">
-        {categories.map((category) => {
-          if (category.count === 0) return null;
+      {/* Toggle between Revenue and Profit */}
+      <div className="flex gap-2 mb-4">
+        <button
+          onClick={() => setShowRevenue(true)}
+          className={`flex-1 py-1.5 text-xs font-medium rounded transition-colors ${
+            showRevenue
+              ? 'bg-emerald-600 text-white'
+              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+          }`}
+        >
+          Revenue
+        </button>
+        <button
+          onClick={() => setShowRevenue(false)}
+          className={`flex-1 py-1.5 text-xs font-medium rounded transition-colors ${
+            !showRevenue
+              ? 'bg-emerald-600 text-white'
+              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+          }`}
+        >
+          Profit
+        </button>
+      </div>
 
-          const percentage = totalCount > 0
-            ? ((category.count / totalCount) * 100).toFixed(0)
-            : 0;
+      {/* Stacked Bar Chart */}
+      {chartData.length > 0 ? (
+        <div className="mb-4">
+          <div className="text-xs text-gray-500 mb-2">
+            {showRevenue ? 'Revenue' : 'Profit'} by {groupByWeek ? 'Week' : 'Month'}
+          </div>
+          <div className="flex items-end gap-1 h-32">
+            {chartData.slice(0, 12).map((period, index) => {
+              const commitVal = showRevenue ? period.commit_revenue : period.commit_profit;
+              const upsideVal = showRevenue ? period.upside_revenue : period.upside_profit;
+              const unreviewedVal = showRevenue ? period.unreviewed_revenue : period.unreviewed_profit;
+              const total = commitVal + upsideVal + unreviewedVal;
+              const totalHeight = maxValue > 0 ? (total / maxValue) * 100 : 0;
 
-          const barWidth = maxValue > 0
-            ? (category.value / maxValue) * 100
-            : 0;
+              const commitHeight = total > 0 ? (commitVal / total) * totalHeight : 0;
+              const upsideHeight = total > 0 ? (upsideVal / total) * totalHeight : 0;
+              const unreviewedHeight = total > 0 ? (unreviewedVal / total) * totalHeight : 0;
 
-          return (
-            <button
-              key={category.label}
-              onClick={() => router.push('/sales-forecast')}
-              className={`w-full text-left p-4 rounded-lg border-2 ${category.colors.border} ${category.colors.bg} hover:opacity-80 transition-opacity`}
-            >
-              <div className="flex items-center justify-between mb-2">
-                <span className={`font-semibold ${category.colors.text}`}>
-                  {category.label}
-                </span>
-                <span className={`text-sm font-medium ${category.colors.text}`}>
-                  {percentage}%
-                </span>
-              </div>
-
-              <div className="flex items-center justify-between text-sm">
-                <span className={category.colors.text}>
-                  {category.count} {category.count === 1 ? 'opportunity' : 'opportunities'}
-                </span>
-                <span className={`font-medium ${category.colors.text}`}>
-                  {formatCurrency(category.value)}
-                </span>
-              </div>
-
-              {/* Progress bar */}
-              <div className="mt-2 w-full bg-white bg-opacity-50 rounded-full h-1.5">
+              return (
                 <div
-                  className={`h-1.5 rounded-full ${category.colors.bar}`}
-                  style={{ width: `${barWidth}%` }}
-                ></div>
-              </div>
-            </button>
-          );
-        })}
+                  key={period.period}
+                  className="flex-1 flex flex-col justify-end group relative"
+                  title={`${period.periodLabel}: ${formatCurrency(total)}`}
+                >
+                  <div className="flex flex-col justify-end" style={{ height: `${totalHeight}%` }}>
+                    {unreviewedHeight > 0 && (
+                      <div
+                        className="bg-gray-300 rounded-t-sm"
+                        style={{ height: `${(unreviewedHeight / totalHeight) * 100}%`, minHeight: '2px' }}
+                      />
+                    )}
+                    {upsideHeight > 0 && (
+                      <div
+                        className="bg-blue-400"
+                        style={{ height: `${(upsideHeight / totalHeight) * 100}%`, minHeight: '2px' }}
+                      />
+                    )}
+                    {commitHeight > 0 && (
+                      <div
+                        className="bg-green-500 rounded-b-sm"
+                        style={{ height: `${(commitHeight / totalHeight) * 100}%`, minHeight: '2px' }}
+                      />
+                    )}
+                  </div>
+                  <div className="text-[9px] text-gray-400 text-center mt-1 truncate">
+                    {period.periodLabel}
+                  </div>
+                  {/* Tooltip */}
+                  <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-10">
+                    {period.periodLabel}: {formatCurrency(total)}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      ) : (
+        <div className="h-32 flex items-center justify-center text-gray-400 text-sm mb-4">
+          No time series data available
+        </div>
+      )}
+
+      {/* Legend */}
+      <div className="flex justify-center gap-4 text-xs mb-4">
+        <div className="flex items-center gap-1">
+          <div className="w-3 h-3 bg-green-500 rounded-sm"></div>
+          <span className="text-gray-600">Commit</span>
+        </div>
+        <div className="flex items-center gap-1">
+          <div className="w-3 h-3 bg-blue-400 rounded-sm"></div>
+          <span className="text-gray-600">Upside</span>
+        </div>
+        <div className="flex items-center gap-1">
+          <div className="w-3 h-3 bg-gray-300 rounded-sm"></div>
+          <span className="text-gray-600">Unreviewed</span>
+        </div>
+      </div>
+
+      {/* Quick Stats */}
+      <div className="grid grid-cols-3 gap-2 text-center border-t border-gray-200 pt-3">
+        <div>
+          <div className="text-sm font-bold text-green-600">{formatCurrency(data.commit_revenue)}</div>
+          <div className="text-[10px] text-gray-500">{data.commit_count} Commit</div>
+        </div>
+        <div>
+          <div className="text-sm font-bold text-blue-600">{formatCurrency(data.upside_revenue)}</div>
+          <div className="text-[10px] text-gray-500">{data.upside_count} Upside</div>
+        </div>
+        <div>
+          <div className="text-sm font-bold text-gray-500">{formatCurrency(data.unreviewed_revenue)}</div>
+          <div className="text-[10px] text-gray-500">{data.unreviewed_count} Unreviewed</div>
+        </div>
       </div>
 
       {/* Excluded indicator */}
       {data.excluded_count > 0 && (
-        <div className="mt-3 text-xs text-gray-500">
+        <div className="mt-2 text-[10px] text-center text-gray-400">
           {data.excluded_count} excluded ({formatCurrency(data.excluded_revenue)})
         </div>
       )}
-
-      {/* Help Text */}
-      <div className="mt-4 pt-4 border-t border-gray-200">
-        <p className="text-xs text-gray-500">
-          Click to view and manage your sales forecast pipeline
-        </p>
-      </div>
     </div>
   );
 }

@@ -8,6 +8,7 @@ import {
   ForecastByOwner,
   ForecastByCustomer,
   ForecastByProbabilityBand,
+  ForecastTimeSeries,
   PROBABILITY_BANDS
 } from '@/types/forecast';
 
@@ -399,4 +400,107 @@ export function formatPercentage(value: number): string {
  */
 export function formatMargin(margin: number): string {
   return `${(margin * 100).toFixed(1)}%`;
+}
+
+/**
+ * Get the week number for a date (ISO week)
+ */
+function getWeekNumber(date: Date): number {
+  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+  const dayNum = d.getUTCDay() || 7;
+  d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+  return Math.ceil((((d.getTime() - yearStart.getTime()) / 86400000) + 1) / 7);
+}
+
+/**
+ * Get week start date for display
+ */
+function getWeekStartDate(date: Date): Date {
+  const d = new Date(date);
+  const day = d.getDay();
+  const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+  return new Date(d.setDate(diff));
+}
+
+/**
+ * Format a week label (e.g., "Jan 6")
+ */
+function formatWeekLabel(date: Date): string {
+  const weekStart = getWeekStartDate(date);
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  return `${months[weekStart.getMonth()]} ${weekStart.getDate()}`;
+}
+
+/**
+ * Format a month label (e.g., "Jan")
+ */
+function formatMonthLabel(date: Date): string {
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  return months[date.getMonth()];
+}
+
+/**
+ * Calculate forecast time series data grouped by week or month
+ */
+export function calculateForecastTimeSeries(
+  opportunities: OpportunityWithForecast[],
+  groupByWeek: boolean
+): ForecastTimeSeries[] {
+  const periodMap = new Map<string, ForecastTimeSeries>();
+
+  for (const opp of opportunities) {
+    if (!opp.starts_at) continue;
+
+    const date = new Date(opp.starts_at);
+    let period: string;
+    let periodLabel: string;
+
+    if (groupByWeek) {
+      const year = date.getFullYear();
+      const week = getWeekNumber(date);
+      period = `${year}-W${week.toString().padStart(2, '0')}`;
+      periodLabel = formatWeekLabel(date);
+    } else {
+      const year = date.getFullYear();
+      const month = date.getMonth() + 1;
+      period = `${year}-${month.toString().padStart(2, '0')}`;
+      periodLabel = formatMonthLabel(date);
+    }
+
+    if (!periodMap.has(period)) {
+      periodMap.set(period, {
+        period,
+        periodLabel,
+        commit_revenue: 0,
+        upside_revenue: 0,
+        unreviewed_revenue: 0,
+        commit_profit: 0,
+        upside_profit: 0,
+        unreviewed_profit: 0
+      });
+    }
+
+    const entry = periodMap.get(period)!;
+
+    // Skip excluded
+    if (opp.forecast?.is_excluded) continue;
+
+    if (!opp.forecast) {
+      // Unreviewed
+      entry.unreviewed_revenue += opp.charge_total;
+      entry.unreviewed_profit += opp.base_profit;
+    } else if (opp.forecast.is_commit) {
+      // Commit (weighted)
+      entry.commit_revenue += opp.weighted_revenue;
+      entry.commit_profit += opp.weighted_profit;
+    } else {
+      // Upside (weighted)
+      entry.upside_revenue += opp.weighted_revenue;
+      entry.upside_profit += opp.weighted_profit;
+    }
+  }
+
+  // Sort by period
+  return Array.from(periodMap.values()).sort((a, b) => a.period.localeCompare(b.period));
 }
