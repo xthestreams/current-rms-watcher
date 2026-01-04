@@ -30,6 +30,7 @@ export default async function handler(
         owner_name,
         starts_at,
         ends_at,
+        updated_at_rms as updated_at,
         opportunity_status,
         charge_total,
         data
