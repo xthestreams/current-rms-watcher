@@ -51,6 +51,8 @@ export default function RiskSettings() {
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [expandedFactor, setExpandedFactor] = useState<string | null>(null);
+  const [needsMigration, setNeedsMigration] = useState(false);
+  const [runningMigration, setRunningMigration] = useState(false);
 
   // Fetch settings and members on mount
   useEffect(() => {
@@ -65,6 +67,9 @@ export default function RiskSettings() {
 
       if (data.success) {
         setSettings(data.settings);
+        if (data.needsMigration) {
+          setNeedsMigration(true);
+        }
       } else {
         setError(data.error || 'Failed to load settings');
       }
@@ -73,6 +78,27 @@ export default function RiskSettings() {
       console.error('Error fetching settings:', err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const runMigration = async () => {
+    setRunningMigration(true);
+    try {
+      const response = await fetch('/api/migrate-database', { method: 'POST' });
+      const data = await response.json();
+
+      if (data.success) {
+        setNeedsMigration(false);
+        setSuccessMessage('Database migration completed successfully');
+        setTimeout(() => setSuccessMessage(null), 3000);
+      } else {
+        setError('Migration failed: ' + (data.error || 'Unknown error'));
+      }
+    } catch (err) {
+      setError('Failed to run migration');
+      console.error('Error running migration:', err);
+    } finally {
+      setRunningMigration(false);
     }
   };
 
@@ -291,6 +317,35 @@ export default function RiskSettings() {
             </div>
           </div>
         </div>
+
+        {/* Migration Banner */}
+        {needsMigration && (
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4">
+            <div className="bg-amber-100 border border-amber-300 text-amber-800 px-4 py-3 rounded-lg flex items-center justify-between">
+              <div>
+                <strong>Database Setup Required:</strong> The risk_settings table needs to be created.
+                Settings shown below are defaults and cannot be saved until migration is run.
+              </div>
+              <button
+                onClick={runMigration}
+                disabled={runningMigration}
+                className="ml-4 px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 disabled:opacity-50 flex items-center gap-2"
+              >
+                {runningMigration ? (
+                  <>
+                    <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Running...
+                  </>
+                ) : (
+                  'Run Migration'
+                )}
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Messages */}
         {error && (

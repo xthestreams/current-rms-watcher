@@ -43,11 +43,27 @@ export default async function handler(
   try {
     if (req.method === 'GET') {
       // Fetch current risk settings
-      const result = await sql`
-        SELECT setting_key, setting_value
-        FROM risk_settings
-        WHERE setting_key IN ('risk_factors', 'approval_thresholds')
-      `;
+      let result;
+      try {
+        result = await sql`
+          SELECT setting_key, setting_value
+          FROM risk_settings
+          WHERE setting_key IN ('risk_factors', 'approval_thresholds')
+        `;
+      } catch (dbError: any) {
+        // If table doesn't exist, return defaults
+        if (dbError?.code === '42P01') {
+          console.log('[API] risk_settings table does not exist, returning defaults');
+          const defaults = getDefaultRiskSettings();
+          return res.status(200).json({
+            success: true,
+            settings: defaults,
+            isDefault: true,
+            needsMigration: true
+          });
+        }
+        throw dbError;
+      }
 
       // If no settings exist, return defaults
       if (result.rows.length === 0) {
