@@ -27,6 +27,20 @@ export default function RiskManagementPage() {
     fetchSubdomain();
   }, []);
 
+  // Read filter from URL query parameter
+  useEffect(() => {
+    if (router.isReady) {
+      const { filter } = router.query;
+      if (filter && typeof filter === 'string') {
+        // Valid filter values: ALL, CRITICAL, HIGH, MEDIUM, LOW, UNSCORED
+        const validFilters = ['ALL', 'CRITICAL', 'HIGH', 'MEDIUM', 'LOW', 'UNSCORED'];
+        if (validFilters.includes(filter.toUpperCase())) {
+          setFilterLevel(filter.toUpperCase());
+        }
+      }
+    }
+  }, [router.isReady, router.query]);
+
   const fetchSubdomain = async () => {
     try {
       const response = await fetch('/api/debug');

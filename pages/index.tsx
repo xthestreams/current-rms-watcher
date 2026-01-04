@@ -289,7 +289,8 @@ export default function Dashboard() {
             <RiskStatusSummary
               data={riskSummaryData}
               onCategoryClick={(level: RiskLevel) => {
-                router.push(`/risk/${level === null ? 'null' : level}`);
+                const filterValue = level === null ? 'UNSCORED' : level;
+                router.push(`/risk-management?filter=${filterValue}`);
               }}
             />
             <SyncControl />
