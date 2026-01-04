@@ -105,7 +105,37 @@ export default async function handler(
       });
     }
 
-    // Migration 4: Ensure opportunities table has all required columns
+    // Migration 4: Create risk_settings table
+    try {
+      await sql`
+        CREATE TABLE IF NOT EXISTS risk_settings (
+          id SERIAL PRIMARY KEY,
+          setting_key TEXT NOT NULL UNIQUE,
+          setting_value JSONB NOT NULL,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+      `;
+
+      // Create index on setting_key for fast lookups
+      await sql`
+        CREATE INDEX IF NOT EXISTS idx_risk_settings_key
+        ON risk_settings(setting_key)
+      `;
+
+      migrations.push({
+        name: 'Create risk_settings table',
+        status: 'success',
+        message: 'Table and indexes created or already exist'
+      });
+    } catch (error) {
+      errors.push({
+        name: 'Create risk_settings table',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+
+    // Migration 5: Ensure opportunities table has all required columns
     try {
       await sql`
         CREATE TABLE IF NOT EXISTS opportunities (

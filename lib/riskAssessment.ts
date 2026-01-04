@@ -1,5 +1,6 @@
 // Risk Assessment Business Logic
 // Ported from avriskassessment repository
+// Settings can be stored in database and fetched via /api/settings/risk
 
 export interface RiskFactor {
   id: string;
@@ -224,4 +225,120 @@ export function needsRiskReview(
   const riskDate = new Date(riskLastUpdated);
 
   return oppDate > riskDate;
+}
+
+/**
+ * Approval threshold configuration
+ */
+export interface ApprovalThreshold {
+  maxScore: number;
+  approver: number | null;
+  approverName: string;
+}
+
+export interface ApprovalThresholds {
+  low: ApprovalThreshold;
+  medium: ApprovalThreshold;
+  high: ApprovalThreshold;
+  critical: ApprovalThreshold;
+}
+
+export interface RiskSettings {
+  risk_factors: RiskFactor[];
+  approval_thresholds: ApprovalThresholds;
+}
+
+// Cache for risk settings to avoid repeated API calls
+let cachedSettings: RiskSettings | null = null;
+let cacheTimestamp: number = 0;
+const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+
+/**
+ * Fetch risk settings from database (client-side)
+ * Falls back to default RISK_FACTORS if API call fails
+ */
+export async function fetchRiskSettings(): Promise<RiskSettings> {
+  // Check cache first
+  if (cachedSettings && (Date.now() - cacheTimestamp) < CACHE_TTL) {
+    return cachedSettings;
+  }
+
+  try {
+    const response = await fetch('/api/settings/risk');
+    const data = await response.json();
+
+    if (data.success) {
+      cachedSettings = data.settings;
+      cacheTimestamp = Date.now();
+      return data.settings;
+    }
+  } catch (error) {
+    console.error('Failed to fetch risk settings, using defaults:', error);
+  }
+
+  // Return default settings
+  return {
+    risk_factors: RISK_FACTORS,
+    approval_thresholds: {
+      low: { maxScore: 2.0, approver: null, approverName: 'Project Manager' },
+      medium: { maxScore: 3.0, approver: null, approverName: 'Senior Manager' },
+      high: { maxScore: 4.0, approver: null, approverName: 'Operations Director' },
+      critical: { maxScore: 5.0, approver: null, approverName: 'Executive Approval Required' }
+    }
+  };
+}
+
+/**
+ * Clear the settings cache (call after saving new settings)
+ */
+export function clearRiskSettingsCache(): void {
+  cachedSettings = null;
+  cacheTimestamp = 0;
+}
+
+/**
+ * Calculate weighted risk score using custom factors
+ */
+export function calculateRiskScoreWithFactors(
+  scores: RiskScores,
+  factors: RiskFactor[]
+): number {
+  let totalWeightedScore = 0;
+  let totalWeight = 0;
+
+  factors.forEach(factor => {
+    const score = scores[factor.id as keyof RiskScores];
+    if (score !== undefined && score !== null) {
+      totalWeightedScore += score * factor.weight;
+      totalWeight += factor.weight;
+    }
+  });
+
+  if (totalWeight === 0) return 0;
+  return parseFloat((totalWeightedScore / totalWeight).toFixed(2));
+}
+
+/**
+ * Get approval level using custom thresholds
+ */
+export function getApprovalLevelWithThresholds(
+  score: number,
+  thresholds: ApprovalThresholds
+): { level: RiskLevel; approver: ApprovalThreshold } {
+  if (score === 0) {
+    return {
+      level: null,
+      approver: { maxScore: 0, approver: null, approverName: 'Not assessed' }
+    };
+  }
+  if (score <= thresholds.low.maxScore) {
+    return { level: 'LOW', approver: thresholds.low };
+  }
+  if (score <= thresholds.medium.maxScore) {
+    return { level: 'MEDIUM', approver: thresholds.medium };
+  }
+  if (score <= thresholds.high.maxScore) {
+    return { level: 'HIGH', approver: thresholds.high };
+  }
+  return { level: 'CRITICAL', approver: thresholds.critical };
 }

@@ -5,6 +5,15 @@ const SUBDOMAIN = process.env.CURRENT_RMS_SUBDOMAIN;
 const API_KEY = process.env.CURRENT_RMS_API_KEY;
 const BASE_URL = `https://api.current-rms.com/api/v1`;
 
+interface CurrentRMSMember {
+  id: number;
+  name: string;
+  email?: string;
+  membership_type?: string;
+  active?: boolean;
+  [key: string]: any;
+}
+
 interface CurrentRMSOpportunity {
   id: number;
   name: string;
@@ -168,6 +177,68 @@ export class CurrentRMSClient {
 
     const endpoint = `/opportunities?${params.toString()}`;
     return this.request<{ opportunities: CurrentRMSOpportunity[]; meta: any }>(endpoint);
+  }
+
+  /**
+   * Fetch members from CurrentRMS
+   * @param membershipType - Filter by membership type (e.g., 'User', 'Contact')
+   * @param page - Page number for pagination
+   * @param perPage - Results per page (max 100)
+   */
+  async getMembers(
+    membershipType?: string,
+    page: number = 1,
+    perPage: number = 100
+  ): Promise<{ members: CurrentRMSMember[]; meta: any }> {
+    const params = new URLSearchParams();
+
+    if (membershipType) {
+      params.append('q[membership_type_eq]', membershipType);
+    }
+
+    params.append('page', page.toString());
+    params.append('per_page', perPage.toString());
+
+    const endpoint = `/members?${params.toString()}`;
+    const response = await this.request<{ members: CurrentRMSMember[]; meta: any }>(endpoint);
+
+    console.log(`[CurrentRMS] Fetched ${response.members?.length || 0} members (page ${page})`);
+
+    return response;
+  }
+
+  /**
+   * Fetch all members of a specific type (handles pagination automatically)
+   * @param membershipType - Filter by membership type (e.g., 'User')
+   */
+  async getAllMembers(membershipType?: string): Promise<CurrentRMSMember[]> {
+    const allMembers: CurrentRMSMember[] = [];
+    let page = 1;
+    let hasMore = true;
+
+    while (hasMore) {
+      const response = await this.getMembers(membershipType, page, 100);
+
+      if (response.members && response.members.length > 0) {
+        allMembers.push(...response.members);
+
+        const totalRowCount = response.meta?.total_row_count || 0;
+        const perPage = response.meta?.per_page || 100;
+        const totalPages = totalRowCount > 0 ? Math.ceil(totalRowCount / perPage) : 1;
+
+        hasMore = page < totalPages;
+        page++;
+
+        if (hasMore) {
+          await new Promise(resolve => setTimeout(resolve, 200));
+        }
+      } else {
+        hasMore = false;
+      }
+    }
+
+    console.log(`[CurrentRMS] Fetched total of ${allMembers.length} members`);
+    return allMembers;
   }
 }
 
